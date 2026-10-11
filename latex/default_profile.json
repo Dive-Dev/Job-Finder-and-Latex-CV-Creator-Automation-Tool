@@ -1,0 +1,76 @@
+{
+  "name": "Alex Morgan",
+  "title": "Senior Full-Stack & Systems Engineer",
+  "email": "alex.morgan@email.com",
+  "phone": "+1 (555) 234-5678",
+  "location": "San Francisco, CA",
+  "linkedin": "linkedin.com/in/alexmorgan-dev",
+  "github": "github.com/alexmorgan",
+  "portfolio": "alexmorgan.dev",
+  "summary": "Results-oriented Software Engineer with 5+ years of experience building high-throughput distributed systems, scalable web applications, and resilient cloud architectures.",
+  "education": [
+    {
+      "degree": "B.S. in Computer Science",
+      "institution": "University of California, Berkeley",
+      "location": "Berkeley, CA",
+      "dates": "2018 - 2022",
+      "gpa": "3.85 / 4.0",
+      "details": "Dean's Honor List, Coursework: Distributed Systems, Operating Systems, Algorithms"
+    }
+  ],
+  "experience": [
+    {
+      "company": "CloudScale Technologies",
+      "role": "Senior Software Engineer",
+      "location": "San Francisco, CA",
+      "dates": "2023 - Present",
+      "bullets": [
+        "Architected and deployed high-performance microservices handling 25,000+ requests/sec using Python, Go, and Redis.",
+        "Reduced p99 API latency by 42% through optimized PostgreSQL indexing, query rewriting, and asynchronous task queues.",
+        "Spearheaded cloud migration to AWS EKS with Terraform, cutting monthly infrastructure spend by $18,000.",
+        "Mentored 4 junior engineers on clean architecture, comprehensive unit testing, and automated CI/CD deployment pipelines."
+      ]
+    },
+    {
+      "company": "Apex Fintech Solutions",
+      "role": "Software Engineer",
+      "location": "San Jose, CA",
+      "dates": "2022 - 2023",
+      "bullets": [
+        "Developed full-stack responsive web dashboard using React, TypeScript, and FastAPI serving 120,000 active monthly users.",
+        "Integrated real-time financial transaction processing using Apache Kafka and automated fraud anomaly detection models.",
+        "Achieved 99.98% platform uptime by implementing distributed tracing and proactive alerting with Prometheus and Grafana."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "JobPulse AI & CV Generator",
+      "technologies": "Python, Flask, Google Gemini AI, SQLite, LaTeX",
+      "link": "github.com/alexmorgan/jobpulse",
+      "bullets": [
+        "Created an end-to-end automated job hunting engine scraping LinkedIn and Google ATS postings with instant company portal discovery.",
+        "Engineered an ATS resume matching engine analyzing job descriptions and generating job-tailored LaTeX CVs with 95%+ keyword alignment."
+      ]
+    },
+    {
+      "name": "Distributed Key-Value Store",
+      "technologies": "Go, Raft Consensus, gRPC, Docker",
+      "link": "github.com/alexmorgan/distributed-kv",
+      "bullets": [
+        "Implemented linearizable Raft consensus algorithm supporting leader election, log replication, and automated cluster membership changes.",
+        "Benchmarked throughput exceeding 60,000 writes/sec across 5-node cluster using custom gRPC client pool."
+      ]
+    }
+  ],
+  "skills": {
+    "Languages": ["Python", "JavaScript", "TypeScript", "Go", "SQL", "C++", "HTML/CSS"],
+    "Frameworks & Libraries": ["React", "Next.js", "Node.js", "FastAPI", "Flask", "Django", "Tailwind CSS"],
+    "Cloud & DevOps": ["AWS (EC2, S3, RDS, Lambda, EKS)", "Docker", "Kubernetes", "Terraform", "GitHub Actions", "CI/CD"],
+    "Databases & Tools": ["PostgreSQL", "MySQL", "MongoDB", "Redis", "Kafka", "Git", "Linux", "GraphQL"]
+  },
+  "certifications": [
+    "AWS Certified Solutions Architect – Associate",
+    "Certified Kubernetes Administrator (CKA)"
+  ]
+}

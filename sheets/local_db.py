@@ -234,6 +234,17 @@ def get_user_profile():
             return json.loads(row['profile_data'])
         except Exception:
             pass
+            
+    # Fallback to default_profile.json
+    default_json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'latex', 'default_profile.json')
+    if os.path.exists(default_json_path):
+        try:
+            with open(default_json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                save_user_profile(data)
+                return data
+        except Exception:
+            pass
     return None
 
 def save_user_profile(profile_dict):

@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AI Job Finder, LinkedIn & Google ATS Scraper, Application Tracker and LaTeX CV Creator">
+  <title>JobPulse AI — Smart Job Discovery & LaTeX CV Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="brand-wrapper">
+      <div class="brand-logo-icon">⚡</div>
+      <div>
+        <h1 class="brand-title">JobPulse AI</h1>
+        <div class="brand-subtitle">Job Scraper • ATS Matcher • LaTeX CV Studio</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="app-nav" id="main-nav">
+      <button class="nav-tab-btn active" data-tab="tab-discovery" id="nav-btn-discovery">
+        🎯 <span>Discovery</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="tab-companies" id="nav-btn-companies">
+        🏢 <span>Company Sites</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="tab-pipeline" id="nav-btn-pipeline">
+        📋 <span>Pipeline</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="tab-latex" id="nav-btn-latex">
+        📄 <span>LaTeX CV Studio</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="tab-ai" id="nav-btn-ai">
+        🤖 <span>AI JD Inspector</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="tab-settings" id="nav-btn-settings">
+        ⚙️ <span>Settings</span>
+      </button>
+    </nav>
+
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <button class="btn btn-secondary btn-sm" id="btn-sync-sheets" title="Sync current pipeline to Google Sheets">
+        📊 <span>Sync Sheets</span>
+      </button>
+      <button class="btn btn-primary btn-sm" id="btn-open-new-job-modal">
+        ➕ <span>Add Job</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Real-time Pipeline Stats Banner -->
+  <section class="stats-banner" id="stats-banner">
+    <div class="stat-pill">
+      <div class="stat-info">
+        <div class="stat-label">Total Tracked</div>
+        <div class="stat-value" id="stat-total">0</div>
+      </div>
+      <div class="stat-icon icon-blue">📁</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-info">
+        <div class="stat-label">Wishlist</div>
+        <div class="stat-value" id="stat-wishlist">0</div>
+      </div>
+      <div class="stat-icon icon-purple">🌟</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-info">
+        <div class="stat-label">Applied</div>
+        <div class="stat-value" id="stat-applied">0</div>
+      </div>
+      <div class="stat-icon icon-amber">🚀</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-info">
+        <div class="stat-label">Interviewing</div>
+        <div class="stat-value" id="stat-interviewing">0</div>
+      </div>
+      <div class="stat-icon icon-green">💬</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-info">
+        <div class="stat-label">Offers</div>
+        <div class="stat-value" id="stat-offers">0</div>
+      </div>
+      <div class="stat-icon icon-rose">🏆</div>
+    </div>
+  </section>
+
+  <!-- Main Content Container -->
+  <main class="app-content">
+
+    <!-- ==========================================
+         TAB 1: JOB DISCOVERY (LinkedIn & Google)
+         ========================================== -->
+    <div class="tab-pane active" id="tab-discovery">
+      <div class="grid-2">
+        <!-- LinkedIn Scraper Card -->
+        <div class="glass-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🎯 LinkedIn Job Search Scraper</div>
+              <div class="card-description">Paste any LinkedIn search URL or search by title & location without logging in.</div>
+            </div>
+            <span class="badge badge-source">LinkedIn Guest API</span>
+          </div>
+
+          <form id="form-linkedin-scrape">
+            <div class="form-group">
+              <label class="form-label" for="li-search-query">LinkedIn Search URL or Keyword</label>
+              <input type="text" class="form-input" id="li-search-query" 
+                     placeholder="e.g. https://www.linkedin.com/jobs/search?keywords=Python or 'Full Stack Developer'" required>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="li-location">Location (optional)</label>
+                <input type="text" class="form-input" id="li-location" placeholder="e.g. Remote, San Francisco, London">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="li-max-results">Results Limit</label>
+                <select class="form-select" id="li-max-results">
+                  <option value="10">10 Jobs</option>
+                  <option value="20" selected>20 Jobs</option>
+                  <option value="35">35 Jobs</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="li-find-company-sites" checked>
+                <span>Automatically discover company official career pages & ATS portals</span>
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary" id="btn-scrape-linkedin" style="width: 100%;">
+              <span>⚡ Scrape LinkedIn Jobs</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Google Search & Direct ATS Scraper Card -->
+        <div class="glass-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🔍 Google Search & Direct ATS Finder</div>
+              <div class="card-description">Target direct career portals (Greenhouse, Lever, Ashby, Workday) with zero spam.</div>
+            </div>
+            <span class="badge badge-ats">Direct ATS Dorks</span>
+          </div>
+
+          <form id="form-google-scrape">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="google-role">Role Title</label>
+                <input type="text" class="form-input" id="google-role" placeholder="e.g. Senior Backend Engineer" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="google-location">Location</label>
+                <input type="text" class="form-input" id="google-location" placeholder="e.g. Remote or Bengaluru">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="google-exp">Experience</label>
+                <select class="form-select" id="google-exp">
+                  <option value="">Any Level</option>
+                  <option value="Entry level">Entry Level / Junior</option>
+                  <option value="Mid level" selected>Mid Level</option>
+                  <option value="Senior">Senior (5+ yrs)</option>
+                  <option value="Lead">Lead / Staff</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="google-work-type">Work Arrangement</label>
+                <select class="form-select" id="google-work-type">
+                  <option value="Remote" selected>Remote</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="On-site">On-site</option>
+                  <option value="Any">Any</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="google-keywords">Key Tech Stack / Preferences</label>
+              <input type="text" class="form-input" id="google-keywords" placeholder="e.g. Python, FastAPI, Docker, Kubernetes">
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="google-ats-only" checked>
+                <span>Direct ATS filter: Focus on Greenhouse, Lever, Ashby, Workday portals</span>
+              </label>
+            </div>
+            <button type="submit" class="btn btn-gradient" id="btn-scrape-google" style="width: 100%;">
+              <span>🔎 Search Direct Opportunities</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Discovery Results Feed -->
+      <div class="glass-card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📋 Discovery Stream (<span id="discovery-count">0</span> Opportunities Found)</div>
+            <div class="card-description">Live scraped jobs with 1-click apply, company careers portal links, and ATS match ratings.</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btn-clear-discovery">Clear Feed</button>
+        </div>
+        <div id="discovery-feed-container">
+          <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            <div>🎯 Start a search above using a LinkedIn URL or Google Role & Location to discover jobs!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         TAB 2: COMPANY SITES EXPLORER
+         ========================================== -->
+    <div class="tab-pane" id="tab-companies">
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">🏢 Company Official Career Sites Explorer</div>
+            <div class="card-description">Discover the exact careers portal, ATS platform, and open listings for any company.</div>
+          </div>
+        </div>
+
+        <form id="form-company-search" style="margin-bottom: 2rem;">
+          <div class="form-row">
+            <div class="form-group" style="flex: 2;">
+              <label class="form-label" for="company-search-name">Company Name</label>
+              <input type="text" class="form-input" id="company-search-name" placeholder="e.g. Stripe, OpenAI, Spotify, Datadog" required>
+            </div>
+            <div class="form-group" style="flex: 2;">
+              <label class="form-label" for="company-search-web">Website / Domain (optional)</label>
+              <input type="text" class="form-input" id="company-search-web" placeholder="e.g. stripe.com">
+            </div>
+            <div class="form-group" style="flex: 1; align-self: flex-end;">
+              <button type="submit" class="btn btn-primary" style="width: 100%;">
+                <span>🔍 Find Career Site</span>
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <div id="company-search-result-box" style="display: none; margin-bottom: 2rem;">
+          <!-- Dynamically filled with found portal card -->
+        </div>
+
+        <div class="card-title" style="margin-bottom: 1rem;">🌟 Popular Tech Career Portals</div>
+        <div class="grid-3" id="popular-companies-grid">
+          <!-- Curated top tech company career links -->
+          <div class="job-card">
+            <div class="job-card-top">
+              <div>
+                <div class="job-company">OpenAI</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">San Francisco, CA • Remote Friendly</div>
+              </div>
+              <span class="badge badge-ats">Greenhouse</span>
+            </div>
+            <div class="job-card-actions">
+              <a href="https://openai.com/careers" target="_blank" class="btn btn-secondary btn-sm">Careers Page ↗</a>
+              <a href="https://boards.greenhouse.io/openai" target="_blank" class="btn btn-primary btn-sm">Greenhouse Portal ↗</a>
+            </div>
+          </div>
+
+          <div class="job-card">
+            <div class="job-card-top">
+              <div>
+                <div class="job-company">Stripe</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Global Remote • FinTech Platform</div>
+              </div>
+              <span class="badge badge-ats">Direct Portal</span>
+            </div>
+            <div class="job-card-actions">
+              <a href="https://stripe.com/jobs" target="_blank" class="btn btn-secondary btn-sm">Careers Page ↗</a>
+              <a href="https://stripe.com/jobs/search" target="_blank" class="btn btn-primary btn-sm">Job Search ↗</a>
+            </div>
+          </div>
+
+          <div class="job-card">
+            <div class="job-card-top">
+              <div>
+                <div class="job-company">Figma</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">San Francisco, CA • Remote</div>
+              </div>
+              <span class="badge badge-ats">Ashby</span>
+            </div>
+            <div class="job-card-actions">
+              <a href="https://www.figma.com/careers" target="_blank" class="btn btn-secondary btn-sm">Careers Page ↗</a>
+              <a href="https://jobs.ashbyhq.com/figma" target="_blank" class="btn btn-primary btn-sm">Ashby Portal ↗</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         TAB 3: APPLICATION PIPELINE (Kanban)
+         ========================================== -->
+    <div class="tab-pane" id="tab-pipeline">
+      <div class="glass-card" style="margin-bottom: 1.5rem;">
+        <div class="card-header" style="margin-bottom: 0;">
+          <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
+            <input type="text" class="form-input" id="pipeline-search-input" 
+                   placeholder="🔍 Search tracked applications by title, company, or skill..." style="max-width: 400px;">
+            <select class="form-select" id="pipeline-filter-status" style="max-width: 180px;">
+              <option value="All">All Statuses</option>
+              <option value="Wishlist">Wishlist</option>
+              <option value="Applied">Applied</option>
+              <option value="Interviewing">Interviewing</option>
+              <option value="Offer">Offer</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary btn-sm" id="btn-refresh-pipeline">🔄 Refresh</button>
+            <button class="btn btn-success btn-sm" id="btn-pipeline-sync-sheets">📊 Push to Sheets</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kanban Columns -->
+      <div class="kanban-board" id="kanban-board">
+        <!-- 1. Wishlist -->
+        <div class="kanban-column" data-status="Wishlist">
+          <div class="kanban-column-header">
+            <span>🌟 Wishlist</span>
+            <span class="kanban-count" id="count-wishlist">0</span>
+          </div>
+          <div class="kanban-cards-container" id="kanban-col-wishlist"></div>
+        </div>
+
+        <!-- 2. Applied -->
+        <div class="kanban-column" data-status="Applied">
+          <div class="kanban-column-header">
+            <span>🚀 Applied</span>
+            <span class="kanban-count" id="count-applied">0</span>
+          </div>
+          <div class="kanban-cards-container" id="kanban-col-applied"></div>
+        </div>
+
+        <!-- 3. Interviewing -->
+        <div class="kanban-column" data-status="Interviewing">
+          <div class="kanban-column-header">
+            <span>💬 Interviewing</span>
+            <span class="kanban-count" id="count-interviewing">0</span>
+          </div>
+          <div class="kanban-cards-container" id="kanban-col-interviewing"></div>
+        </div>
+
+        <!-- 4. Offer -->
+        <div class="kanban-column" data-status="Offer">
+          <div class="kanban-column-header">
+            <span>🏆 Offer</span>
+            <span class="kanban-count" id="count-offer">0</span>
+          </div>
+          <div class="kanban-cards-container" id="kanban-col-offer"></div>
+        </div>
+
+        <!-- 5. Rejected -->
+        <div class="kanban-column" data-status="Rejected">
+          <div class="kanban-column-header">
+            <span>❌ Rejected</span>
+            <span class="kanban-count" id="count-rejected">0</span>
+          </div>
+          <div class="kanban-cards-container" id="kanban-col-rejected"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         TAB 4: LATEX CV STUDIO
+         ========================================== -->
+    <div class="tab-pane" id="tab-latex">
+      <div class="grid-2">
+        <!-- Profile & Job Tailor Controller -->
+        <div class="glass-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">👤 Candidate Profile & AI Tailoring</div>
+              <div class="card-description">Edit your master resume data or tailor for a specific job from your pipeline.</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-save-profile">💾 Save Profile</button>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="select-job-for-cv">🎯 Tailor For Tracked Job (Optional)</label>
+            <select class="form-select" id="select-job-for-cv">
+              <option value="">-- Use Standard Master Profile --</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="profile-name">Full Name</label>
+              <input type="text" class="form-input" id="profile-name">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="profile-title">Professional Title</label>
+              <input type="text" class="form-input" id="profile-title">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="profile-email">Email</label>
+              <input type="email" class="form-input" id="profile-email">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="profile-phone">Phone</label>
+              <input type="text" class="form-input" id="profile-phone">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="profile-linkedin">LinkedIn</label>
+              <input type="text" class="form-input" id="profile-linkedin" placeholder="linkedin.com/in/username">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="profile-github">GitHub</label>
+              <input type="text" class="form-input" id="profile-github" placeholder="github.com/username">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="profile-location">Location</label>
+            <input type="text" class="form-input" id="profile-location">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="profile-summary">Summary</label>
+            <textarea class="form-textarea" id="profile-summary" style="min-height: 70px;"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="profile-skills-raw">Technical Skills (Languages, Frameworks, Cloud, Databases)</label>
+            <textarea class="form-textarea" id="profile-skills-raw" style="min-height: 80px;" placeholder="Languages: Python, Go&#10;Frameworks: React, FastAPI"></textarea>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+            <button class="btn btn-primary" id="btn-generate-latex" style="flex: 1;">
+              <span>⚡ Generate LaTeX CV</span>
+            </button>
+            <button class="btn btn-gradient" id="btn-ai-tailor-latex" style="flex: 1;">
+              <span>🤖 AI STAR Tailoring</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- LaTeX Output & Overleaf Studio -->
+        <div class="glass-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">📄 LaTeX Code & Export Studio</div>
+              <div class="card-description">ATS-compliant clean LaTeX code ready for instant Overleaf or local compilation.</div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-secondary btn-sm" id="btn-copy-latex">📋 Copy Code</button>
+              <a href="https://www.overleaf.com/docs" target="_blank" class="btn btn-success btn-sm" id="btn-open-overleaf">🍃 Open Overleaf</a>
+            </div>
+          </div>
+
+          <textarea class="latex-editor-box" id="latex-code-output" spellcheck="false" placeholder="% Generated LaTeX code will appear here..."></textarea>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+            <div id="compiler-status-indicator" style="font-size: 0.85rem; color: var(--text-secondary);">
+              <span>💡 Status: Generated ATS LaTeX Ready</span>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-secondary btn-sm" id="btn-download-tex">💾 Download .tex</button>
+              <button class="btn btn-primary btn-sm" id="btn-download-pdf">📥 Download PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         TAB 5: AI JD INSPECTOR & OUTREACH
+         ========================================== -->
+    <div class="tab-pane" id="tab-ai">
+      <div class="grid-2">
+        <!-- Input JD -->
+        <div class="glass-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🤖 AI Job Description Analyzer</div>
+              <div class="card-description">Extract skills, ATS keywords, seniority, and match score from any job posting.</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="ai-jd-input">Job Description Text</label>
+            <textarea class="form-textarea" id="ai-jd-input" style="min-height: 250px;" 
+                      placeholder="Paste the full job description text here..."></textarea>
+          </div>
+
+          <button class="btn btn-gradient" id="btn-analyze-jd" style="width: 100%;">
+            <span>⚡ Run ATS Deep Analysis</span>
+          </button>
+        </div>
+
+        <!-- Analysis & Outreach Results -->
+        <div class="glass-card">
+          <div class="card-header">
+            <div class="card-title">📊 ATS Score & Match Breakdown</div>
+            <div id="ats-score-badge" class="badge badge-match" style="font-size: 0.9rem; padding: 0.35rem 0.8rem;">
+              Score: --%
+            </div>
+          </div>
+
+          <div id="ai-analysis-output" style="color: var(--text-secondary); font-size: 0.9rem;">
+            <div style="padding: 2rem 1rem; text-align: center; color: var(--text-muted);">
+              Paste a Job Description on the left and click "Run ATS Deep Analysis".
+            </div>
+          </div>
+
+          <div id="outreach-output-box" style="display: none; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+            <div class="card-title" style="margin-bottom: 0.75rem;">✉️ Personalized Cold Outreach Messages</div>
+            
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                <label class="form-label" style="margin: 0;">LinkedIn InMail / Message</label>
+                <button class="btn btn-secondary btn-sm" id="btn-copy-linkedin-msg">Copy Message</button>
+              </div>
+              <textarea class="form-textarea" id="outreach-linkedin-text" style="min-height: 90px;" readonly></textarea>
+            </div>
+
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                <label class="form-label" style="margin: 0;">Hiring Manager Cover Letter / Email</label>
+                <button class="btn btn-secondary btn-sm" id="btn-copy-email-msg">Copy Email</button>
+              </div>
+              <textarea class="form-textarea" id="outreach-email-text" style="min-height: 120px;" readonly></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         TAB 6: SETTINGS & SYNC
+         ========================================== -->
+    <div class="tab-pane" id="tab-settings">
+      <div class="glass-card" style="max-width: 800px; margin: 0 auto;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">⚙️ Preferences & Integrations</div>
+            <div class="card-description">Configure your Gemini AI key and Google Sheets credentials.</div>
+          </div>
+        </div>
+
+        <form id="form-settings">
+          <div class="form-group">
+            <label class="form-label" for="setting-gemini-key">Google Gemini API Key</label>
+            <input type="password" class="form-input" id="setting-gemini-key" placeholder="AIzaSy...">
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem;">
+              Get a 100% free Gemini API key at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--accent-cyan);">Google AI Studio</a>. (Note: Heuristic ATS parsing works even without an API key).
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="setting-sheet-name">Google Sheet Name</label>
+            <input type="text" class="form-input" id="setting-sheet-name" value="Job Applications Tracker">
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem;">
+              Place your Google Service Account key in <code>creds.json</code> in the project root to enable automated Google Sheets synchronization.
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button type="submit" class="btn btn-primary">💾 Save Settings</button>
+            <button type="button" class="btn btn-secondary" id="btn-test-sheets">📊 Test Google Sheets Sync</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal: Add New Job Manually -->
+  <div class="modal-overlay" id="modal-add-job">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="card-title">➕ Add New Job Opportunity</div>
+        <button class="modal-close-btn" id="btn-close-add-modal">&times;</button>
+      </div>
+      <form id="form-add-manual-job">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="manual-job-title">Job Title</label>
+            <input type="text" class="form-input" id="manual-job-title" required placeholder="e.g. Senior Frontend Engineer">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="manual-job-company">Company</label>
+            <input type="text" class="form-input" id="manual-job-company" required placeholder="e.g. Vercel">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="manual-job-loc">Location</label>
+            <input type="text" class="form-input" id="manual-job-loc" placeholder="e.g. Remote">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="manual-job-status">Initial Status</label>
+            <select class="form-select" id="manual-job-status">
+              <option value="Wishlist">Wishlist</option>
+              <option value="Applied">Applied</option>
+              <option value="Interviewing">Interviewing</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="manual-job-url">Job Posting URL</label>
+          <input type="url" class="form-input" id="manual-job-url" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="manual-job-career-url">Official Career Page (Optional)</label>
+          <input type="url" class="form-input" id="manual-job-career-url" placeholder="Leave blank to auto-discover">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="manual-job-skills">Required Skills (Comma separated)</label>
+          <input type="text" class="form-input" id="manual-job-skills" placeholder="Next.js, TypeScript, Tailwind">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="manual-job-desc">Job Description / Notes</label>
+          <textarea class="form-textarea" id="manual-job-desc" placeholder="Paste JD or application notes..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Save to Pipeline</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Core JavaScript -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
