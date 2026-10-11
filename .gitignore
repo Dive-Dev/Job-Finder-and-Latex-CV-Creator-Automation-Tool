@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Database & SQLite
+*.db
+*.sqlite3
+
+# Credentials & Secrets
+creds.json
+
+# Build & LaTeX artifacts
+output/*.pdf
+output/*.aux
+output/*.log
+output/*.out
+output/*.fls
+output/*.fdb_latexmk
+output/*.synctex.gz
