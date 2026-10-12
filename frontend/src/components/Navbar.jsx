@@ -33,7 +33,6 @@ import {
   FiRefreshCw,
   FiGlobe,
   FiAward,
-  FiMenu,
   FiChevronRight
 } from 'react-icons/fi'
 import { api } from '../api'
@@ -184,15 +183,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAddJob }) {
             Add Job
           </Button>
 
-          {/* Mobile Hamburger Menu Button */}
-          <IconButton
-            display={{ base: 'inline-flex', lg: 'none' }}
-            aria-label="Open Navigation Menu"
-            icon={<FiMenu />}
-            size="sm"
-            variant="outline"
-            onClick={onOpenMobileNav}
-          />
+
         </HStack>
       </Flex>
 

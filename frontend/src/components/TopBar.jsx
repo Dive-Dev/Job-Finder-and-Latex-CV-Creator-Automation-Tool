@@ -6,16 +6,12 @@ import {
   Heading,
   Text,
   Button,
-  IconButton,
   Badge,
   useToast,
-  Tooltip,
 } from '@chakra-ui/react'
 import {
-  FiMenu,
   FiPlus,
   FiRefreshCw,
-  FiCheckCircle,
   FiCpu,
   FiList,
   FiCompass,
@@ -46,7 +42,6 @@ const TAB_META = {
 
 export default function TopBar({
   activeTab,
-  onToggleSidebar,
   onOpenAddJob,
 }) {
   const toast = useToast()
@@ -100,40 +95,28 @@ export default function TopBar({
       px={{ base: 3, md: 6 }}
     >
       <Flex h="full" justify="space-between" align="center">
-        {/* Left: Burger Button & Active Page Breadcrumb */}
-        <HStack spacing={3}>
-          <IconButton
-            size="sm"
-            variant="ghost"
-            color="gray.300"
-            _hover={{ color: '#F86F03', bg: 'rgba(255, 246, 244, 0.06)' }}
-            icon={<FiMenu />}
-            aria-label="Toggle Left Tool Bar"
-            onClick={onToggleSidebar}
-          />
-
-          <HStack spacing={2.5}>
-            <Box color="#525FE1" fontSize="md">
-              <ActiveIcon />
-            </Box>
-            <Heading size="xs" color="#FFF6F4" fontWeight="700" letterSpacing="-0.01em">
-              {meta.title}
-            </Heading>
-            {meta.badge && (
-              <Badge
-                bg="rgba(248, 111, 3, 0.16)"
-                color="#F86F03"
-                border="1px solid rgba(248, 111, 3, 0.35)"
-                fontSize="3xs"
-                px={1.5}
-                py={0.5}
-                borderRadius="sm"
-                display={{ base: 'none', sm: 'inline-block' }}
-              >
-                {meta.badge}
-              </Badge>
-            )}
-          </HStack>
+        {/* Left: Active Page Breadcrumb */}
+        <HStack spacing={2.5}>
+          <Box color="#525FE1" fontSize="md">
+            <ActiveIcon />
+          </Box>
+          <Heading size="xs" color="#FFF6F4" fontWeight="700" letterSpacing="-0.01em">
+            {meta.title}
+          </Heading>
+          {meta.badge && (
+            <Badge
+              bg="rgba(248, 111, 3, 0.16)"
+              color="#F86F03"
+              border="1px solid rgba(248, 111, 3, 0.35)"
+              fontSize="3xs"
+              px={1.5}
+              py={0.5}
+              borderRadius="sm"
+              display={{ base: 'none', sm: 'inline-block' }}
+            >
+              {meta.badge}
+            </Badge>
+          )}
         </HStack>
 
         {/* Right: Minimal Important Actions Only */}

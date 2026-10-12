@@ -172,16 +172,9 @@ export default function App() {
 
       {/* Main Column: Top Bar + Content + Footer */}
       <Flex flex="1" direction="column" minW="0">
-        {/* Minimal Important Top Bar with Burger toggle */}
+        {/* Minimal Important Top Bar */}
         <TopBar
           activeTab={activeTab}
-          onToggleSidebar={() => {
-            if (typeof window !== 'undefined' && window.innerWidth < 768) {
-              onOpenMobileNav()
-            } else {
-              setIsSidebarCollapsed((prev) => !prev)
-            }
-          }}
           onOpenAddJob={onOpenAddJob}
         />
 
