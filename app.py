@@ -9,14 +9,17 @@ load_dotenv()
 from sheets.local_db import (
     save_job, save_jobs_batch, get_all_jobs, get_job_by_id, 
     update_job_status, update_job_details, delete_job, get_stats,
-    get_user_profile, save_user_profile
+    get_user_profile, save_user_profile,
+    save_contact, get_contacts, update_contact_status, delete_contact
 )
 from sheets.sheets_client import append_job_to_sheet, sync_all_jobs_to_sheet
 from scraper.linkedin_scraper import scrape_linkedin_jobs, scrape_single_linkedin_job
 from scraper.google_scraper import search_jobs_google
 from scraper.company_scraper import find_company_career_site
+from scraper.recruiter_finder import search_company_contacts, predict_company_email_patterns
 from ai.jd_analyzer import analyze_jd
 from ai.cv_tailor import calculate_ats_match, tailor_bullet_points, generate_cold_outreach
+from ai.referral_generator import generate_personalized_referral_outreach
 from latex.cv_generator import generate_latex_cv, OUTPUT_DIR
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
@@ -99,16 +102,29 @@ def api_get_stats():
 @app.route('/api/scrape/linkedin', methods=['POST'])
 def api_scrape_linkedin():
     data = request.json or {}
-    query_or_url = data.get('query', '').strip()
-    location = data.get('location', '').strip()
-    max_results = int(data.get('max_results', 15))
+    query_or_url = data.get('query') or data.get('roles') or ''
+    if isinstance(query_or_url, str):
+        query_or_url = query_or_url.strip()
+    location = data.get('location', '').strip() or 'Bengaluru, Karnataka, India'
+    max_results = int(data.get('max_results', 20))
     auto_save = data.get('auto_save', True)
+    cookie = data.get('cookie') or data.get('li_at') or ''
+    find_company_sites = data.get('find_company_sites', True)
 
     if not query_or_url:
         return jsonify({"success": False, "error": "LinkedIn URL or keywords required"}), 400
 
     try:
-        jobs = scrape_linkedin_jobs(query_or_url, location=location, max_results=max_results)
+        from scraper.linkedin_scraper import parse_linkedin_search_url
+        parsed_meta = parse_linkedin_search_url(query_or_url) if (isinstance(query_or_url, str) and query_or_url.startswith('http')) else None
+        
+        jobs = scrape_linkedin_jobs(
+            query_or_url,
+            location=location,
+            max_results=max_results,
+            find_company_sites=find_company_sites,
+            cookie=cookie
+        )
         
         # Calculate initial match scores against user profile
         profile = get_user_profile() or {}
@@ -122,7 +138,8 @@ def api_scrape_linkedin():
             "success": True,
             "jobs": jobs,
             "count": len(jobs),
-            "saved": auto_save
+            "saved": auto_save,
+            "parsed_url": parsed_meta
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -130,15 +147,15 @@ def api_scrape_linkedin():
 @app.route('/api/scrape/google', methods=['POST'])
 def api_scrape_google():
     data = request.json or {}
-    role = data.get('role', '').strip()
-    location = data.get('location', '').strip()
+    role = data.get('roles') or data.get('role') or ''
+    location = data.get('locations') or data.get('location') or 'Bengaluru, Karnataka, India'
     preferences = {
         "experience": data.get('experience', ''),
         "work_type": data.get('work_type', ''),
         "keywords": data.get('keywords', ''),
         "ats_only": data.get('ats_only', True),
     }
-    max_results = int(data.get('max_results', 12))
+    max_results = int(data.get('max_results', 15))
     auto_save = data.get('auto_save', True)
 
     if not role:
@@ -173,6 +190,77 @@ def api_scrape_company():
 
     info = find_company_career_site(company, website)
     return jsonify({"success": True, "company_info": info})
+
+# --- CONTACTS & REFERRAL APIS ---
+
+@app.route('/api/contacts/search', methods=['POST'])
+def api_search_contacts():
+    data = request.json or {}
+    company = data.get('company', '').strip()
+    contact_type = data.get('contact_type', 'all')
+    location = data.get('location', '').strip()
+    domain = data.get('domain', '').strip()
+    max_results = int(data.get('max_results', 12))
+
+    if not company:
+        return jsonify({"success": False, "error": "Company name required"}), 400
+
+    contacts = search_company_contacts(company, contact_type=contact_type, location=location, domain=domain, max_results=max_results)
+    email_meta = predict_company_email_patterns(company, domain)
+    
+    return jsonify({
+        "success": True,
+        "contacts": contacts,
+        "count": len(contacts),
+        "email_patterns": email_meta
+    })
+
+@app.route('/api/contacts', methods=['GET'])
+def api_get_saved_contacts():
+    company = request.args.get('company')
+    contacts = get_contacts(company=company)
+    return jsonify({"success": True, "contacts": contacts, "count": len(contacts)})
+
+@app.route('/api/contacts', methods=['POST'])
+def api_save_contact():
+    data = request.json or {}
+    cid = save_contact(data)
+    return jsonify({"success": True, "id": cid, "message": "Contact saved to your networking tracker"})
+
+@app.route('/api/contacts/<cid>/status', methods=['PATCH'])
+def api_update_contact_status(cid):
+    data = request.json or {}
+    status = data.get('status', 'Not Contacted')
+    notes = data.get('notes')
+    update_contact_status(cid, status, notes)
+    return jsonify({"success": True, "status": status})
+
+@app.route('/api/contacts/<cid>', methods=['DELETE'])
+def api_delete_contact(cid):
+    delete_contact(cid)
+    return jsonify({"success": True, "message": "Contact removed"})
+
+@app.route('/api/contacts/outreach', methods=['POST'])
+def api_generate_contact_outreach():
+    data = request.json or {}
+    contact_name = data.get('contact_name', '')
+    contact_role = data.get('contact_role', 'Recruiter')
+    company = data.get('company', '')
+    target_role = data.get('target_role', 'Software Engineer')
+    outreach_type = data.get('outreach_type', 'referral')
+    job_id_or_link = data.get('job_link', '')
+
+    profile = get_user_profile() or {}
+    outreach = generate_personalized_referral_outreach(
+        contact_name=contact_name,
+        contact_role=contact_role,
+        company_name=company,
+        target_role=target_role,
+        candidate_profile=profile,
+        outreach_type=outreach_type,
+        job_id_or_link=job_id_or_link
+    )
+    return jsonify({"success": True, "outreach": outreach})
 
 # --- AI & ATS APIS ---
 

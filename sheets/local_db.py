@@ -51,6 +51,21 @@ def init_db():
             value TEXT
         )
     ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS contacts (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            headline TEXT,
+            role_category TEXT,
+            company TEXT,
+            profile_url TEXT,
+            predicted_email TEXT,
+            outreach_status TEXT DEFAULT 'Not Contacted',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     
     conn.commit()
     conn.close()
@@ -254,6 +269,60 @@ def save_user_profile(profile_dict):
         INSERT OR REPLACE INTO user_profile (id, profile_data, updated_at)
         VALUES ('default', ?, CURRENT_TIMESTAMP)
     ''', (json.dumps(profile_dict),))
+    conn.commit()
+    conn.close()
+    return True
+
+def save_contact(contact_data):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cid = contact_data.get('id') or str(uuid.uuid4())
+    cursor.execute('''
+        INSERT OR REPLACE INTO contacts (
+            id, name, headline, role_category, company,
+            profile_url, predicted_email, outreach_status, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        cid,
+        contact_data.get('name', 'Professional'),
+        contact_data.get('headline', ''),
+        contact_data.get('role_category', 'Recruiter / HR'),
+        contact_data.get('company', ''),
+        contact_data.get('profile_url', ''),
+        contact_data.get('predicted_email', ''),
+        contact_data.get('outreach_status', 'Not Contacted'),
+        contact_data.get('notes', '')
+    ))
+    conn.commit()
+    conn.close()
+    return cid
+
+def get_contacts(company=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    if company:
+        cursor.execute("SELECT * FROM contacts WHERE company LIKE ? ORDER BY created_at DESC", (f"%{company}%",))
+    else:
+        cursor.execute("SELECT * FROM contacts ORDER BY created_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def update_contact_status(contact_id, status, notes=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    if notes is not None:
+        cursor.execute("UPDATE contacts SET outreach_status = ?, notes = ? WHERE id = ?", (status, notes, contact_id))
+    else:
+        cursor.execute("UPDATE contacts SET outreach_status = ? WHERE id = ?", (status, contact_id))
+    conn.commit()
+    conn.close()
+    return True
+
+def delete_contact(contact_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM contacts WHERE id = ?", (contact_id,))
     conn.commit()
     conn.close()
     return True

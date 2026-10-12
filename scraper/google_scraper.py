@@ -11,9 +11,26 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-def build_google_job_query(role, location, preferences=None):
+def format_location_query(location):
+    if not location:
+        return ""
+    loc_lower = location.lower()
+    if "bengaluru" in loc_lower or "bangalore" in loc_lower or "karnataka" in loc_lower:
+        # Precision anchor for Silicon Valley of India
+        return '("Bengaluru" OR "Bangalore" OR "Bengaluru, Karnataka")'
+    elif loc_lower == "remote":
+        return '"remote"'
+    elif "," in location:
+        locs = [l.strip() for l in location.split(",") if l.strip()]
+        if len(locs) > 1:
+            return "(" + " OR ".join(f'"{l}"' for l in locs) + ")"
+        return f'"{location.strip()}"'
+    return f'"{location.strip()}"'
+
+def build_google_job_query(role, location="", preferences=None):
     """
     Builds an optimized Google dork / job search query.
+    Supports multiple roles, multiple locations, and specialized Bengaluru optimization.
     """
     preferences = preferences or {}
     exp = preferences.get('experience', '')
@@ -23,14 +40,28 @@ def build_google_job_query(role, location, preferences=None):
     
     parts = []
     
-    if role:
-        parts.append(f'"{role}"')
-        
-    if location:
-        if location.lower() == 'remote':
-            parts.append('"remote"')
+    # Handle multi-role
+    if isinstance(role, list) and role:
+        parts.append("(" + " OR ".join(f'"{r.strip()}"' for r in role if r.strip()) + ")")
+    elif role:
+        if "," in role:
+            roles = [r.strip() for r in role.split(",") if r.strip()]
+            if len(roles) > 1:
+                parts.append("(" + " OR ".join(f'"{r}"' for r in roles) + ")")
+            else:
+                parts.append(f'"{role.strip()}"')
         else:
-            parts.append(f'"{location}"')
+            parts.append(f'"{role.strip()}"')
+        
+    # Handle location (with Bengaluru optimization)
+    if isinstance(location, list) and location:
+        formatted_locs = [format_location_query(loc) for loc in location if loc.strip()]
+        if formatted_locs:
+            parts.append("(" + " OR ".join(formatted_locs) + ")")
+    elif location:
+        loc_part = format_location_query(location)
+        if loc_part:
+            parts.append(loc_part)
             
     if work_type and work_type.lower() != 'any' and work_type.lower() != 'remote':
         parts.append(f'"{work_type}"')
@@ -39,15 +70,16 @@ def build_google_job_query(role, location, preferences=None):
         parts.append(f'"{exp}"')
         
     if keywords:
-        for kw in [k.strip() for k in keywords.split(',') if k.strip()]:
+        kw_list = keywords if isinstance(keywords, list) else [k.strip() for k in keywords.split(',') if k.strip()]
+        for kw in kw_list:
             parts.append(f'"{kw}"')
             
     if ats_only:
-        ats_dork = '(site:boards.greenhouse.io OR site:jobs.lever.co OR site:jobs.ashbyhq.com OR site:myworkdayjobs.com OR site:apply.workable.com)'
+        # ATS systems prominent in Bengaluru and global tech
+        ats_dork = '(site:boards.greenhouse.io OR site:jobs.lever.co OR site:jobs.ashbyhq.com OR site:myworkdayjobs.com OR site:apply.workable.com OR site:darwinbox.in)'
         parts.append(ats_dork)
     else:
         parts.append('("careers" OR "jobs" OR "apply" OR "job opening")')
-        # exclude spam aggregator sites to prioritize company career sites
         parts.append('-site:indeed.com -site:ziprecruiter.com')
         
     return " ".join(parts)

@@ -9,6 +9,8 @@ from sheets.local_db import save_job, get_all_jobs, get_user_profile, save_user_
 from scraper.linkedin_scraper import scrape_linkedin_jobs
 from scraper.google_scraper import search_jobs_google
 from scraper.company_scraper import find_company_career_site
+from scraper.recruiter_finder import search_company_contacts, predict_company_email_patterns
+from ai.referral_generator import generate_personalized_referral_outreach
 from latex.cv_generator import generate_latex_cv
 
 def load_default_profile():
@@ -33,16 +35,31 @@ def interactive_cli():
     print("6. 🌐 Launch Modern Web Dashboard UI (Recommended)")
     print("7. 📊 View Tracked Applications & Stats")
     print("8. 📋 Sync Jobs to Google Sheets")
+    print("9. 👥 Find HR, Recruiters & Employees for Referrals")
     print("0. ❌ Exit")
     print("-" * 65)
 
-    choice = input("Select an option (0-8) [Default: 6]: ").strip() or "6"
+    choice = input("Select an option (0-9) [Default: 6]: ").strip() or "6"
 
     if choice == "1":
-        query = input("\nEnter LinkedIn Job Search URL or Keywords (e.g. 'Software Engineer'): ").strip()
-        location = input("Location (optional, press Enter for default): ").strip()
-        print("\n⏳ Scraping LinkedIn jobs & discovering company sites...")
-        jobs = scrape_linkedin_jobs(query, location=location, max_results=10)
+        query = input("\nEnter LinkedIn Job Search URL (Authenticated or Public) or Keywords: ").strip()
+        location = ""
+        cookie = ""
+        if not (query.startswith('http://') or query.startswith('https://')):
+            location = input("Location [Default: 'Bengaluru, Karnataka, India']: ").strip() or "Bengaluru, Karnataka, India"
+        else:
+            from scraper.linkedin_scraper import parse_linkedin_search_url
+            meta = parse_linkedin_search_url(query)
+            if meta.get('current_job_id'):
+                print(f"🎯 Detected Active Job ID: #{meta['current_job_id']}")
+            if meta.get('filters'):
+                print(f"⚙️ Detected Authenticated Filters: {meta['filters']}")
+            use_cookie = input("Use an authenticated LinkedIn session cookie (li_at)? (y/n) [n]: ").strip().lower()
+            if use_cookie == 'y':
+                cookie = input("Paste li_at cookie: ").strip()
+
+        print(f"\n⏳ Scraping LinkedIn jobs & discovering company career sites...")
+        jobs = scrape_linkedin_jobs(query, location=location, max_results=10, cookie=cookie)
         print(f"\n✅ Found {len(jobs)} jobs:")
         for idx, j in enumerate(jobs, 1):
             print(f"  {idx}. {j['title']} @ {j['company']} ({j['location']})")
@@ -57,8 +74,8 @@ def interactive_cli():
             print(f"💾 Saved {len(jobs)} jobs to your database.")
 
     elif choice == "2":
-        role = input("\nEnter Target Role (e.g. 'Full Stack Engineer'): ").strip()
-        location = input("Location (e.g. 'Remote' or 'San Francisco'): ").strip()
+        role = input("\nEnter Target Role(s) (comma-separated, e.g. 'Full Stack Engineer, Python Developer'): ").strip()
+        location = input("Location [Default: 'Bengaluru, Karnataka, India']: ").strip() or "Bengaluru, Karnataka, India"
         pref = input("Keywords / Tech Stack (comma-separated, e.g. 'Python, React'): ").strip()
         ats_only = input("Search direct ATS portals (Greenhouse, Lever, Ashby)? (y/n) [y]: ").strip().lower() != 'n'
         
@@ -139,6 +156,50 @@ def interactive_cli():
             print(f"✅ {msg}")
         else:
             print(f"⚠️ {msg}")
+
+    elif choice == "9":
+        company = input("\nEnter Target Company Name: ").strip()
+        print("Select target contact type:")
+        print("  1. All Contacts (Recruiters, Managers, Peers)")
+        print("  2. Technical Recruiters & Talent Acquisition")
+        print("  3. Engineering Managers & Leaders")
+        print("  4. Software Engineers & Alumni for Referrals")
+        c_type_choice = input("Choice (1-4) [1]: ").strip() or "1"
+        type_map = {"1": "all", "2": "recruiters", "3": "managers", "4": "employees"}
+        c_type = type_map.get(c_type_choice, "all")
+
+        location = input("Location [Default: 'Bengaluru, Karnataka, India']: ").strip() or "Bengaluru, Karnataka, India"
+        print(f"\n⏳ Searching LinkedIn contacts for {company} in {location}...")
+        contacts = search_company_contacts(company, contact_type=c_type, location=location, max_results=8)
+        email_info = predict_company_email_patterns(company)
+        print(f"\n📧 Predicted Company Email Format: {email_info['example']}")
+        print(f"✅ Found {len(contacts)} verified profiles:")
+        for idx, c in enumerate(contacts, 1):
+            print(f"  {idx}. {c['name']} [{c['role_category']}]")
+            print(f"     Title:    {c['headline']}")
+            print(f"     LinkedIn: {c['profile_url']}")
+            if c.get('predicted_email'):
+                print(f"     Email:    {c['predicted_email']}")
+
+        if contacts:
+            gen = input("\nGenerate personalized outreach message for one of these contacts? (y/n) [y]: ").strip().lower()
+            if gen != 'n':
+                target_role = input("Target Role (e.g. 'Software Engineer'): ").strip() or "Software Engineer"
+                outreach = generate_personalized_referral_outreach(
+                    contact_name=contacts[0]['name'],
+                    contact_role=contacts[0]['headline'],
+                    company_name=company,
+                    target_role=target_role,
+                    candidate_profile=load_default_profile(),
+                    outreach_type="referral" if c_type == "employees" else ("recruiter" if c_type == "recruiters" else "manager")
+                )
+                print("\n⚡ LinkedIn Connection Request Note (<300 chars):")
+                print("-" * 50)
+                print(outreach.get('connection_note'))
+                print("-" * 50)
+                print("\n✉️ Full Email / InMail Pitch:")
+                print(f"Subject: {outreach.get('email_subject')}\n")
+                print(outreach.get('full_message'))
 
     elif choice == "0":
         print("Goodbye!")

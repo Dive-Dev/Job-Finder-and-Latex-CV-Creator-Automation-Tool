@@ -33,6 +33,9 @@
       <button class="nav-tab-btn" data-tab="tab-pipeline" id="nav-btn-pipeline">
         📋 <span>Pipeline</span>
       </button>
+      <button class="nav-tab-btn" data-tab="tab-contacts" id="nav-btn-contacts">
+        👥 <span>People & Referrals</span>
+      </button>
       <button class="nav-tab-btn" data-tab="tab-latex" id="nav-btn-latex">
         📄 <span>LaTeX CV Studio</span>
       </button>
@@ -101,37 +104,108 @@
          TAB 1: JOB DISCOVERY (LinkedIn & Google)
          ========================================== -->
     <div class="tab-pane active" id="tab-discovery">
+      <!-- Bengaluru & Karnataka Accelerator Banner -->
+      <div class="glass-card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%); border-color: rgba(16, 185, 129, 0.3);">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <div style="font-weight: 700; font-size: 1.05rem; color: #fff; display: flex; align-items: center; gap: 0.5rem;">
+              <span>🇮🇳 Bengaluru & Karnataka Tech Job Optimizer</span>
+              <span class="badge badge-ats">Silicon Valley of India</span>
+            </div>
+            <div style="font-size: 0.825rem; color: var(--text-secondary); margin-top: 0.2rem;">
+              Click multiple hubs & roles below to auto-populate your search with precision targeting:
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-success btn-sm" id="btn-quick-bengaluru-search">⚡ Quick Search Bengaluru Jobs</button>
+          </div>
+        </div>
+
+        <!-- Multi-Option Location Hubs -->
+        <div style="margin-top: 0.85rem;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">📍 Multi-Select Tech Hubs (Bengaluru):</div>
+          <div class="chips-container" id="chips-location-container">
+            <span class="filter-chip active-bengaluru" data-loc="Bengaluru, Karnataka, India">📍 All Bengaluru (Default)</span>
+            <span class="filter-chip" data-loc="Bellandur, Outer Ring Road (ORR), Bengaluru">📍 Bellandur / ORR</span>
+            <span class="filter-chip" data-loc="Koramangala, HSR Layout, Bengaluru">📍 Koramangala / HSR</span>
+            <span class="filter-chip" data-loc="Whitefield, Bengaluru">📍 Whitefield Tech Parks</span>
+            <span class="filter-chip" data-loc="Electronic City, Bengaluru">📍 Electronic City</span>
+            <span class="filter-chip" data-loc="Manyata Embassy Tech Park, Bengaluru">📍 Manyata Tech Park</span>
+            <span class="filter-chip" data-loc="Indiranagar, Bengaluru">📍 Indiranagar</span>
+            <span class="filter-chip" data-loc="Remote, India">📍 Remote (India)</span>
+          </div>
+        </div>
+
+        <!-- Multi-Option Roles -->
+        <div style="margin-top: 0.25rem;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">💼 Multi-Select Target Roles:</div>
+          <div class="chips-container" id="chips-role-container">
+            <span class="filter-chip active" data-role="Full Stack Developer">💻 Full Stack Developer</span>
+            <span class="filter-chip" data-role="Python Developer">🐍 Python Developer</span>
+            <span class="filter-chip" data-role="Backend Engineer">⚙️ Backend Engineer</span>
+            <span class="filter-chip" data-role="React Developer">⚛️ React / Frontend</span>
+            <span class="filter-chip" data-role="Java Spring Boot Developer">☕ Java / Spring Boot</span>
+            <span class="filter-chip" data-role="Data Engineer">📊 Data Engineer</span>
+            <span class="filter-chip" data-role="Machine Learning Engineer">🤖 Machine Learning / AI</span>
+            <span class="filter-chip" data-role="DevOps Engineer">☁️ DevOps / Cloud</span>
+            <span class="filter-chip" data-role="Mobile Developer">📱 Mobile (Android/iOS)</span>
+          </div>
+        </div>
+      </div>
+
       <div class="grid-2">
         <!-- LinkedIn Scraper Card -->
         <div class="glass-card">
           <div class="card-header">
             <div>
               <div class="card-title">🎯 LinkedIn Job Search Scraper</div>
-              <div class="card-description">Paste any LinkedIn search URL or search by title & location without logging in.</div>
+              <div class="card-description">Paste any logged-in / authenticated LinkedIn search URL, single job link, or keywords.</div>
             </div>
-            <span class="badge badge-source">LinkedIn Guest API</span>
+            <span class="badge badge-source" id="li-source-badge">Auth URLs & Guest API</span>
           </div>
 
           <form id="form-linkedin-scrape">
             <div class="form-group">
-              <label class="form-label" for="li-search-query">LinkedIn Search URL or Keyword</label>
+              <label class="form-label" for="li-search-query">LinkedIn Search URL (Authenticated or Public) or Keywords</label>
               <input type="text" class="form-input" id="li-search-query" 
-                     placeholder="e.g. https://www.linkedin.com/jobs/search?keywords=Python or 'Full Stack Developer'" required>
+                     value="Full Stack Developer" placeholder="Paste: https://www.linkedin.com/jobs/search/?currentJobId=... or role keywords" required>
+              <div id="li-url-detection-pill" style="display: none; margin-top: 0.45rem; padding: 0.4rem 0.75rem; border-radius: var(--radius-sm); background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); font-size: 0.785rem; color: #c7d2fe;">
+                <span>🔗 <strong>Authenticated Search URL Detected</strong></span>
+                <span id="li-detected-meta" style="margin-left: 0.5rem; color: var(--text-secondary);"></span>
+              </div>
             </div>
+
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label" for="li-location">Location (optional)</label>
-                <input type="text" class="form-input" id="li-location" placeholder="e.g. Remote, San Francisco, London">
+                <label class="form-label" for="li-location">Location</label>
+                <input type="text" class="form-input" id="li-location" value="Bengaluru, Karnataka, India" placeholder="e.g. Bengaluru, Karnataka, India">
               </div>
               <div class="form-group">
                 <label class="form-label" for="li-max-results">Results Limit</label>
                 <select class="form-select" id="li-max-results">
-                  <option value="10">10 Jobs</option>
-                  <option value="20" selected>20 Jobs</option>
-                  <option value="35">35 Jobs</option>
+                  <option value="15">15 Jobs</option>
+                  <option value="25" selected>25 Jobs</option>
+                  <option value="40">40 Jobs</option>
                 </select>
               </div>
             </div>
+
+            <!-- Optional Authenticated li_at Session Cookie for Member-Only Jobs -->
+            <div style="margin-bottom: 0.85rem;">
+              <details style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem;">
+                <summary style="font-size: 0.8rem; font-weight: 600; color: var(--accent-cyan); cursor: pointer; user-select: none;">
+                  🔑 Optional: Member Session Cookie (<code>li_at</code>) for Member-Only Postings
+                </summary>
+                <div style="margin-top: 0.6rem;">
+                  <input type="password" class="form-input" id="li-session-cookie" 
+                         placeholder="Paste li_at cookie value from DevTools (Application > Cookies > li_at)" style="font-size: 0.8rem; font-family: monospace;">
+                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.35rem;">
+                    💡 <em>Optional:</em> Paste your <code>li_at</code> session cookie if you wish to scrape private 1st-degree connections, personal recommendations, or member-only Easy Apply listings.
+                  </div>
+                </div>
+              </details>
+            </div>
+
             <div class="form-group">
               <label class="checkbox-label">
                 <input type="checkbox" id="li-find-company-sites" checked>
@@ -139,7 +213,7 @@
               </label>
             </div>
             <button type="submit" class="btn btn-primary" id="btn-scrape-linkedin" style="width: 100%;">
-              <span>⚡ Scrape LinkedIn Jobs</span>
+              <span>⚡ Scrape LinkedIn Jobs (Auth & Bengaluru Optimized)</span>
             </button>
           </form>
         </div>
@@ -157,12 +231,12 @@
           <form id="form-google-scrape">
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label" for="google-role">Role Title</label>
-                <input type="text" class="form-input" id="google-role" placeholder="e.g. Senior Backend Engineer" required>
+                <label class="form-label" for="google-role">Role Title(s) [Multi-Role Supported]</label>
+                <input type="text" class="form-input" id="google-role" value="Full Stack Developer, Python Developer" placeholder="e.g. Python Developer, Backend Engineer" required>
               </div>
               <div class="form-group">
                 <label class="form-label" for="google-location">Location</label>
-                <input type="text" class="form-input" id="google-location" placeholder="e.g. Remote or Bengaluru">
+                <input type="text" class="form-input" id="google-location" value="Bengaluru, Karnataka, India" placeholder="e.g. Bengaluru, Karnataka, India">
               </div>
             </div>
             <div class="form-row">
@@ -170,34 +244,34 @@
                 <label class="form-label" for="google-exp">Experience</label>
                 <select class="form-select" id="google-exp">
                   <option value="">Any Level</option>
-                  <option value="Entry level">Entry Level / Junior</option>
-                  <option value="Mid level" selected>Mid Level</option>
+                  <option value="Entry level">Entry Level / Junior (0-2 yrs)</option>
+                  <option value="Mid level" selected>Mid Level (2-5 yrs)</option>
                   <option value="Senior">Senior (5+ yrs)</option>
-                  <option value="Lead">Lead / Staff</option>
+                  <option value="Lead">Lead / Staff / Principal</option>
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label" for="google-work-type">Work Arrangement</label>
                 <select class="form-select" id="google-work-type">
-                  <option value="Remote" selected>Remote</option>
+                  <option value="Any" selected>Any (Hybrid / Onsite / Remote)</option>
                   <option value="Hybrid">Hybrid</option>
-                  <option value="On-site">On-site</option>
-                  <option value="Any">Any</option>
+                  <option value="On-site">On-site (Bengaluru)</option>
+                  <option value="Remote">Remote</option>
                 </select>
               </div>
             </div>
             <div class="form-group">
               <label class="form-label" for="google-keywords">Key Tech Stack / Preferences</label>
-              <input type="text" class="form-input" id="google-keywords" placeholder="e.g. Python, FastAPI, Docker, Kubernetes">
+              <input type="text" class="form-input" id="google-keywords" placeholder="e.g. Python, FastAPI, React, Docker, AWS, PostgreSQL">
             </div>
             <div class="form-group">
               <label class="checkbox-label">
                 <input type="checkbox" id="google-ats-only" checked>
-                <span>Direct ATS filter: Focus on Greenhouse, Lever, Ashby, Workday portals</span>
+                <span>Direct ATS filter: Target Greenhouse, Lever, Ashby, Workday, Darwinbox portals</span>
               </label>
             </div>
             <button type="submit" class="btn btn-gradient" id="btn-scrape-google" style="width: 100%;">
-              <span>🔎 Search Direct Opportunities</span>
+              <span>🔎 Search Bengaluru Opportunities (Google ATS)</span>
             </button>
           </form>
         </div>
@@ -254,48 +328,93 @@
           <!-- Dynamically filled with found portal card -->
         </div>
 
-        <div class="card-title" style="margin-bottom: 1rem;">🌟 Popular Tech Career Portals</div>
+        <div class="card-title" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🇮🇳 Top Bengaluru Tech Hubs & Unicorn Portals</span>
+          <span class="badge badge-ats">Direct ATS Career Links</span>
+        </div>
         <div class="grid-3" id="popular-companies-grid">
-          <!-- Curated top tech company career links -->
+          <!-- Curated top Bengaluru tech companies -->
           <div class="job-card">
             <div class="job-card-top">
               <div>
-                <div class="job-company">OpenAI</div>
-                <div style="font-size: 0.8rem; color: var(--text-muted);">San Francisco, CA • Remote Friendly</div>
+                <div class="job-company">Flipkart</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Bengaluru (Bellandur / Cessna Tech Park)</div>
+              </div>
+              <span class="badge badge-ats">E-Commerce Unicorn</span>
+            </div>
+            <div class="job-card-actions">
+              <a href="https://www.flipkartcareers.com/" target="_blank" class="btn btn-secondary btn-sm">Careers ↗</a>
+              <button class="btn btn-primary btn-sm" onclick="findCompanyContacts('Flipkart')">👥 Find HR / Referrals</button>
+            </div>
+          </div>
+
+          <div class="job-card">
+            <div class="job-card-top">
+              <div>
+                <div class="job-company">Swiggy</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Bengaluru (Koramangala / Bellandur)</div>
+              </div>
+              <span class="badge badge-ats">Ashby / Workday</span>
+            </div>
+            <div class="job-card-actions">
+              <a href="https://careers.swiggy.com/" target="_blank" class="btn btn-secondary btn-sm">Careers ↗</a>
+              <button class="btn btn-primary btn-sm" onclick="findCompanyContacts('Swiggy')">👥 Find HR / Referrals</button>
+            </div>
+          </div>
+
+          <div class="job-card">
+            <div class="job-card-top">
+              <div>
+                <div class="job-company">Razorpay</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Bengaluru (Koramangala 3rd Block)</div>
               </div>
               <span class="badge badge-ats">Greenhouse</span>
             </div>
             <div class="job-card-actions">
-              <a href="https://openai.com/careers" target="_blank" class="btn btn-secondary btn-sm">Careers Page ↗</a>
-              <a href="https://boards.greenhouse.io/openai" target="_blank" class="btn btn-primary btn-sm">Greenhouse Portal ↗</a>
+              <a href="https://razorpay.com/jobs/" target="_blank" class="btn btn-secondary btn-sm">Careers ↗</a>
+              <button class="btn btn-primary btn-sm" onclick="findCompanyContacts('Razorpay')">👥 Find HR / Referrals</button>
             </div>
           </div>
 
           <div class="job-card">
             <div class="job-card-top">
               <div>
-                <div class="job-company">Stripe</div>
-                <div style="font-size: 0.8rem; color: var(--text-muted);">Global Remote • FinTech Platform</div>
+                <div class="job-company">CRED</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Bengaluru (Indiranagar 100ft Road)</div>
               </div>
-              <span class="badge badge-ats">Direct Portal</span>
+              <span class="badge badge-ats">Ashby Portal</span>
             </div>
             <div class="job-card-actions">
-              <a href="https://stripe.com/jobs" target="_blank" class="btn btn-secondary btn-sm">Careers Page ↗</a>
-              <a href="https://stripe.com/jobs/search" target="_blank" class="btn btn-primary btn-sm">Job Search ↗</a>
+              <a href="https://careers.cred.club/" target="_blank" class="btn btn-secondary btn-sm">Careers ↗</a>
+              <button class="btn btn-primary btn-sm" onclick="findCompanyContacts('CRED')">👥 Find HR / Referrals</button>
             </div>
           </div>
 
           <div class="job-card">
             <div class="job-card-top">
               <div>
-                <div class="job-company">Figma</div>
-                <div style="font-size: 0.8rem; color: var(--text-muted);">San Francisco, CA • Remote</div>
+                <div class="job-company">Zepto</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Bengaluru (HSR Layout Sector 2)</div>
               </div>
-              <span class="badge badge-ats">Ashby</span>
+              <span class="badge badge-ats">Greenhouse</span>
             </div>
             <div class="job-card-actions">
-              <a href="https://www.figma.com/careers" target="_blank" class="btn btn-secondary btn-sm">Careers Page ↗</a>
-              <a href="https://jobs.ashbyhq.com/figma" target="_blank" class="btn btn-primary btn-sm">Ashby Portal ↗</a>
+              <a href="https://www.zeptonow.com/careers" target="_blank" class="btn btn-secondary btn-sm">Careers ↗</a>
+              <button class="btn btn-primary btn-sm" onclick="findCompanyContacts('Zepto')">👥 Find HR / Referrals</button>
+            </div>
+          </div>
+
+          <div class="job-card">
+            <div class="job-card-top">
+              <div>
+                <div class="job-company">Google India</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Bengaluru (RMZ Infinity / Old Madras Rd)</div>
+              </div>
+              <span class="badge badge-source">Direct Portal</span>
+            </div>
+            <div class="job-card-actions">
+              <a href="https://www.google.com/about/careers/applications/jobs/results/?location=Bengaluru%2C%20Karnataka%2C%20India" target="_blank" class="btn btn-secondary btn-sm">Jobs ↗</a>
+              <button class="btn btn-primary btn-sm" onclick="findCompanyContacts('Google')">👥 Find HR / Referrals</button>
             </div>
           </div>
         </div>
@@ -372,6 +491,92 @@
             <span class="kanban-count" id="count-rejected">0</span>
           </div>
           <div class="kanban-cards-container" id="kanban-col-rejected"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         TAB: PEOPLE & REFERRALS (HR, Recruiters, Employees)
+         ========================================== -->
+    <div class="tab-pane" id="tab-contacts">
+      <div class="glass-card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">👥 Company HR, Recruiters & Referral Finder</div>
+            <div class="card-description">Discover verified technical recruiters, hiring managers, and employees for referrals and application queries.</div>
+          </div>
+          <span class="badge badge-source">LinkedIn X-Ray Intelligence</span>
+        </div>
+
+        <form id="form-contacts-search">
+          <div class="form-row">
+            <div class="form-group" style="flex: 2;">
+              <label class="form-label" for="contact-search-company">Target Company Name</label>
+              <input type="text" class="form-input" id="contact-search-company" placeholder="e.g. Stripe, Datadog, Figma, Google" required>
+            </div>
+            <div class="form-group" style="flex: 2;">
+              <label class="form-label" for="contact-search-type">Target Role / Department</label>
+              <select class="form-select" id="contact-search-type">
+                <option value="all">👔 All Key Contacts (Recruiters + Managers + Peers)</option>
+                <option value="recruiters">🎯 Technical Recruiters & Talent Acquisition</option>
+                <option value="managers">💼 Engineering Managers & Leaders</option>
+                <option value="employees">🤝 Software Engineers (Alumni & Referrals)</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex: 1.5;">
+              <label class="form-label" for="contact-search-location">Location (Optional)</label>
+              <input type="text" class="form-input" id="contact-search-location" placeholder="e.g. Remote, San Francisco, India">
+            </div>
+            <div class="form-group" style="flex: 1; align-self: flex-end;">
+              <button type="submit" class="btn btn-primary" id="btn-search-contacts" style="width: 100%;">
+                <span>🔍 Find Contacts</span>
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Company Email Intelligence Banner -->
+        <div id="company-email-intel-banner" style="display: none; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-md); padding: 0.85rem 1.25rem; margin-top: 1rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <span style="font-weight: 700; color: #fff;">📧 Company Email Domain: </span>
+              <span id="intel-domain" style="color: var(--accent-cyan); font-weight: 600;">company.com</span>
+              <span style="margin: 0 0.5rem; color: var(--text-muted);">|</span>
+              <span style="font-size: 0.85rem; color: var(--text-secondary);">Predicted Standard Format: </span>
+              <code id="intel-pattern" style="background: rgba(0,0,0,0.3); padding: 0.2rem 0.5rem; border-radius: 4px; color: var(--accent-emerald);">first.last@company.com</code>
+            </div>
+            <span class="badge badge-ats">Pattern Verified</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Discovered Contacts Results Grid -->
+      <div class="glass-card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">🎯 Discovered Contacts (<span id="contacts-count">0</span> Found)</div>
+            <div class="card-description">Direct LinkedIn profiles, verified corporate email formats, and 1-click personalized outreach generators.</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btn-show-saved-contacts">📁 View Saved Networking Tracker</button>
+        </div>
+        <div class="grid-2" id="contacts-feed-container">
+          <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            <div>👥 Enter a company name above to discover HR recruiters, engineering leads, and referral contacts!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Saved Contacts & Outreach Tracker Section -->
+      <div class="glass-card" id="saved-contacts-section" style="display: none;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📋 Saved Networking & Outreach Tracker</div>
+            <div class="card-description">Track recruiters and team members you've contacted for referrals and application queries.</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btn-refresh-saved-contacts">🔄 Refresh</button>
+        </div>
+        <div id="saved-contacts-table-container">
+          <!-- Dynamically populated table of saved contacts -->
         </div>
       </div>
     </div>
@@ -636,6 +841,70 @@
         </div>
         <button type="submit" class="btn btn-primary" style="width: 100%;">Save to Pipeline</button>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: Craft Referral & Recruiter Outreach -->
+  <div class="modal-overlay" id="modal-outreach">
+    <div class="modal-box" style="max-width: 720px;">
+      <div class="modal-header">
+        <div>
+          <div class="card-title">✉️ Personalized Referral & Outreach Studio</div>
+          <div class="card-description" id="modal-outreach-subtitle">Reaching out to [Contact Name] at [Company]</div>
+        </div>
+        <button class="modal-close-btn" id="btn-close-outreach-modal">&times;</button>
+      </div>
+
+      <div class="form-row" style="margin-bottom: 1rem;">
+        <div class="form-group">
+          <label class="form-label" for="outreach-strategy-select">Outreach Strategy</label>
+          <select class="form-select" id="outreach-strategy-select">
+            <option value="referral">🤝 Internal Employee Referral Request</option>
+            <option value="recruiter">🎯 HR / Recruiter Application Follow-up</option>
+            <option value="manager">💼 Hiring Manager Direct Pitch</option>
+            <option value="follow_up">🔄 Polite Follow-up (3-5 Days Later)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="outreach-target-role">Target Role Title</label>
+          <input type="text" class="form-input" id="outreach-target-role" placeholder="e.g. Senior Software Engineer">
+        </div>
+      </div>
+
+      <!-- LinkedIn 300-char Note Box -->
+      <div class="form-group" style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+          <div>
+            <span style="font-weight: 700; color: #fff;">⚡ LinkedIn Connection Note </span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">(Strict 300 character limit)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span id="char-counter" style="font-size: 0.75rem; font-weight: 600; color: var(--accent-cyan);">0 / 300</span>
+            <button class="btn btn-secondary btn-sm" id="btn-copy-modal-conn-note">📋 Copy Note</button>
+          </div>
+        </div>
+        <textarea class="form-textarea" id="modal-conn-note-text" style="min-height: 80px;" placeholder="Generating high-impact connection request note..."></textarea>
+      </div>
+
+      <!-- Full Email / InMail Draft Box -->
+      <div class="form-group" style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+          <span style="font-weight: 700; color: #fff;">✉️ InMail / Cold Email Pitch</span>
+          <button class="btn btn-secondary btn-sm" id="btn-copy-modal-full-msg">📋 Copy Email</button>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+          <input type="text" class="form-input" id="modal-email-subject" placeholder="Subject line..." style="font-weight: 600;">
+        </div>
+        <textarea class="form-textarea" id="modal-full-msg-text" style="min-height: 140px;" placeholder="Full personalized message..."></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-secondary" id="btn-regenerate-outreach">🔄 Regenerate with AI</button>
+        <div style="display: flex; gap: 0.5rem;">
+          <a href="#" target="_blank" class="btn btn-success" id="btn-modal-open-linkedin">🔗 Open LinkedIn Profile ↗</a>
+          <button class="btn btn-primary" id="btn-save-contact-from-modal">💾 Save to Networking Tracker</button>
+        </div>
+      </div>
     </div>
   </div>
 

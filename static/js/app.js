@@ -6,6 +6,7 @@ let currentProfile = null;
 let allTrackedJobs = [];
 let lastGeneratedTexFilename = "Resume_CV.tex";
 let lastGeneratedPdfFilename = null;
+let activeOutreachContact = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initNavTabs();
@@ -13,10 +14,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initDiscoveryForms();
   initCompanySearch();
   initPipeline();
+  initContactsTab();
   initLatexStudio();
   initAiInspector();
   initSettings();
   initModal();
+  initOutreachModal();
 });
 
 // --- Toast System ---
@@ -87,6 +90,47 @@ function initDiscoveryForms() {
   const liForm = document.getElementById('form-linkedin-scrape');
   const googleForm = document.getElementById('form-google-scrape');
   const clearBtn = document.getElementById('btn-clear-discovery');
+  const liQueryInput = document.getElementById('li-search-query');
+  const liPill = document.getElementById('li-url-detection-pill');
+  const liMeta = document.getElementById('li-detected-meta');
+
+  // Live detection for authenticated LinkedIn URLs
+  if (liQueryInput && liPill) {
+    const detectAuthUrl = () => {
+      const val = liQueryInput.value.trim();
+      if (val.startsWith('http') && val.includes('linkedin.com')) {
+        try {
+          const u = new URL(val);
+          const currentJobId = u.searchParams.get('currentJobId');
+          const kw = u.searchParams.get('keywords');
+          const loc = u.searchParams.get('location');
+          const fTpr = u.searchParams.get('f_TPR');
+          const fWt = u.searchParams.get('f_WT');
+
+          const tags = [];
+          if (currentJobId) tags.push(`🎯 Active Job: #${currentJobId}`);
+          if (kw) tags.push(`Keywords: "${kw}"`);
+          if (loc) {
+            tags.push(`📍 ${loc}`);
+            const locInput = document.getElementById('li-location');
+            if (locInput) locInput.value = loc;
+          }
+          if (fTpr) tags.push(`Date Filter: ${fTpr}`);
+          if (fWt) tags.push(`Work Type: ${fWt}`);
+
+          if (liMeta) liMeta.innerText = tags.join(' • ') || 'Authenticated session filters detected';
+          liPill.style.display = 'block';
+        } catch (err) {
+          liPill.style.display = 'none';
+        }
+      } else {
+        liPill.style.display = 'none';
+      }
+    };
+
+    liQueryInput.addEventListener('input', detectAuthUrl);
+    liQueryInput.addEventListener('paste', () => setTimeout(detectAuthUrl, 50));
+  }
 
   liForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -94,22 +138,35 @@ function initDiscoveryForms() {
     const location = document.getElementById('li-location').value.trim();
     const maxResults = document.getElementById('li-max-results').value;
     const findSites = document.getElementById('li-find-company-sites').checked;
+    const cookieInput = document.getElementById('li-session-cookie');
+    const cookie = cookieInput ? cookieInput.value.trim() : '';
 
     const btn = document.getElementById('btn-scrape-linkedin');
     const originalText = btn.innerHTML;
-    btn.innerHTML = `<span class="spinner"></span> <span>Scraping LinkedIn Jobs...</span>`;
+    btn.innerHTML = `<span class="spinner"></span> <span>Extracting LinkedIn Postings...</span>`;
     btn.disabled = true;
 
     try {
-      showToast("Searching LinkedIn public postings...", "info");
+      showToast(query.startsWith('http') ? "Scraping authenticated LinkedIn search URL..." : "Searching LinkedIn job postings...", "info");
       const res = await fetch('/api/scrape/linkedin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, location, max_results: maxResults, auto_save: true, find_company_sites: findSites })
+        body: JSON.stringify({
+          query,
+          location,
+          max_results: maxResults,
+          auto_save: true,
+          find_company_sites: findSites,
+          cookie: cookie
+        })
       });
       const data = await res.json();
       if (data.success) {
-        showToast(`Discovered and saved ${data.count} LinkedIn jobs!`, "success");
+        if (data.parsed_url && data.parsed_url.current_job_id) {
+          showToast(`Discovered & saved active Job #${data.parsed_url.current_job_id} + ${data.count - 1} search results!`, "success");
+        } else {
+          showToast(`Discovered and saved ${data.count} LinkedIn jobs!`, "success");
+        }
         renderDiscoveryCards(data.jobs);
         initStats();
       } else {
@@ -171,7 +228,153 @@ function initDiscoveryForms() {
     `;
     document.getElementById('discovery-count').innerText = '0';
   });
+
+  initBengaluruChips();
 }
+
+function initBengaluruChips() {
+  const locContainer = document.getElementById('chips-location-container');
+  const roleContainer = document.getElementById('chips-role-container');
+  const liQueryInput = document.getElementById('li-search-query');
+  const liLocInput = document.getElementById('li-location');
+  const googleRoleInput = document.getElementById('google-role');
+  const googleLocInput = document.getElementById('google-location');
+  const quickSearchBtn = document.getElementById('btn-quick-bengaluru-search');
+
+  // Multi-option roles chip selection
+  if (roleContainer) {
+    roleContainer.addEventListener('click', (e) => {
+      const chip = e.target.closest('.filter-chip');
+      if (!chip) return;
+
+      chip.classList.toggle('active');
+
+      const activeChips = roleContainer.querySelectorAll('.filter-chip.active');
+      const selectedRoles = Array.from(activeChips).map(c => c.dataset.role).filter(Boolean);
+      const roleQueryStr = selectedRoles.join(', ');
+
+      if (liQueryInput) liQueryInput.value = roleQueryStr || 'Full Stack Developer';
+      if (googleRoleInput) googleRoleInput.value = roleQueryStr || 'Full Stack Developer';
+    });
+  }
+
+  // Multi-option locations & hubs selection
+  if (locContainer) {
+    locContainer.addEventListener('click', (e) => {
+      const chip = e.target.closest('.filter-chip');
+      if (!chip) return;
+
+      const isDefaultAll = chip.dataset.loc === 'Bengaluru, Karnataka, India';
+
+      if (isDefaultAll) {
+        // Reset all specific chips, activate All Bengaluru
+        locContainer.querySelectorAll('.filter-chip').forEach(c => {
+          c.classList.remove('active', 'active-bengaluru');
+        });
+        chip.classList.add('active-bengaluru');
+      } else {
+        // Toggle specific hub chip
+        chip.classList.toggle('active-bengaluru');
+        const allChip = locContainer.querySelector('[data-loc="Bengaluru, Karnataka, India"]');
+        if (allChip) allChip.classList.remove('active-bengaluru');
+
+        const activeChips = locContainer.querySelectorAll('.filter-chip.active-bengaluru');
+        if (activeChips.length === 0 && allChip) {
+          allChip.classList.add('active-bengaluru');
+        }
+      }
+
+      const activeLocChips = locContainer.querySelectorAll('.filter-chip.active-bengaluru');
+      const selectedLocs = Array.from(activeLocChips).map(c => c.dataset.loc).filter(Boolean);
+      const locQueryStr = selectedLocs.length > 0 ? selectedLocs.join(', ') : 'Bengaluru, Karnataka, India';
+
+      if (liLocInput) liLocInput.value = selectedLocs.length === 1 ? selectedLocs[0] : 'Bengaluru, Karnataka, India';
+      if (googleLocInput) googleLocInput.value = locQueryStr;
+    });
+  }
+
+  // Quick Search Bengaluru Jobs button (concurrent multi-portal pipeline)
+  if (quickSearchBtn) {
+    quickSearchBtn.addEventListener('click', async () => {
+      const activeRoleChips = roleContainer ? roleContainer.querySelectorAll('.filter-chip.active') : [];
+      const selectedRoles = Array.from(activeRoleChips).map(c => c.dataset.role).filter(Boolean);
+      const roleQuery = selectedRoles.join(', ') || (liQueryInput ? liQueryInput.value : 'Full Stack Developer, Python Developer');
+
+      const activeLocChips = locContainer ? locContainer.querySelectorAll('.filter-chip.active-bengaluru') : [];
+      const selectedLocs = Array.from(activeLocChips).map(c => c.dataset.loc).filter(Boolean);
+      const locQuery = selectedLocs.length > 0 ? selectedLocs[0] : 'Bengaluru, Karnataka, India';
+
+      const origHtml = quickSearchBtn.innerHTML;
+      quickSearchBtn.innerHTML = `<span class="spinner"></span> <span>Scraping Bengaluru Portals...</span>`;
+      quickSearchBtn.disabled = true;
+
+      showToast(`⚡ Searching Bengaluru tech ecosystem for: ${roleQuery}...`, "info");
+
+      try {
+        const [liRes, googleRes] = await Promise.allSettled([
+          fetch('/api/scrape/linkedin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: roleQuery,
+              location: locQuery,
+              max_results: 15,
+              auto_save: true,
+              find_company_sites: true
+            })
+          }).then(r => r.json()),
+          fetch('/api/scrape/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              role: roleQuery,
+              location: locQuery,
+              ats_only: true,
+              max_results: 15,
+              auto_save: true
+            })
+          }).then(r => r.json())
+        ]);
+
+        let combinedJobs = [];
+        let seenUrls = new Set();
+
+        if (googleRes.status === 'fulfilled' && googleRes.value && googleRes.value.success && Array.isArray(googleRes.value.jobs)) {
+          googleRes.value.jobs.forEach(j => {
+            if (j.job_url && !seenUrls.has(j.job_url)) {
+              seenUrls.add(j.job_url);
+              combinedJobs.push(j);
+            }
+          });
+        }
+
+        if (liRes.status === 'fulfilled' && liRes.value && liRes.value.success && Array.isArray(liRes.value.jobs)) {
+          liRes.value.jobs.forEach(j => {
+            if (j.job_url && !seenUrls.has(j.job_url)) {
+              seenUrls.add(j.job_url);
+              combinedJobs.push(j);
+            }
+          });
+        }
+
+        // Sort by ATS match score descending
+        combinedJobs.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
+
+        renderDiscoveryCards(combinedJobs);
+        initStats();
+
+        showToast(`Discovered & ranked ${combinedJobs.length} Bengaluru jobs across direct ATS & LinkedIn!`, "success");
+      } catch (err) {
+        console.error("Quick Bengaluru search error:", err);
+        showToast("Error executing quick Bengaluru search", "error");
+      } finally {
+        quickSearchBtn.innerHTML = origHtml;
+        quickSearchBtn.disabled = false;
+      }
+    });
+  }
+}
+
 
 function renderDiscoveryCards(jobs) {
   const container = document.getElementById('discovery-feed-container');
@@ -220,6 +423,9 @@ function renderDiscoveryCards(jobs) {
             </button>
             <button class="btn btn-secondary btn-sm" onclick="inspectJobAi('${job.id}')" title="Analyze JD with AI">
               🤖 Inspect JD
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="findCompanyContacts('${escapeHtml(job.company)}')" title="Find HR, recruiters & referral contacts">
+              👥 Find HR
             </button>
           </div>
 
@@ -386,6 +592,7 @@ function renderKanban(jobs) {
             <option value="Rejected" ${st === 'Rejected' ? 'selected' : ''}>❌ Rejected</option>
           </select>
           <div style="display: flex; gap: 0.3rem;">
+            <button class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.4rem;" onclick="findCompanyContacts('${escapeHtml(job.company)}')" title="Find HR, recruiters & referral contacts">👥</button>
             ${job.career_page_url || job.job_url ? `
               <a href="${escapeHtml(job.career_page_url || job.job_url)}" target="_blank" class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.4rem;" title="Open application link">↗</a>` : ''}
             <button class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.4rem; color: var(--accent-rose);" onclick="deleteJob('${job.id}')" title="Delete">🗑</button>
@@ -844,6 +1051,408 @@ function initModal() {
       showToast("Failed to create job", "error");
     }
   });
+}
+
+// ===================================================================
+// People & Referrals Tab (HR, Recruiters, Hiring Managers)
+// ===================================================================
+
+let currentDiscoveredContacts = [];
+
+function initContactsTab() {
+  const form = document.getElementById('form-contacts-search');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const company = document.getElementById('contact-search-company').value.trim();
+      const contactType = document.getElementById('contact-search-type').value;
+      const location = document.getElementById('contact-search-location').value.trim();
+
+      const btn = document.getElementById('btn-search-contacts');
+      const origText = btn.innerHTML;
+      btn.innerHTML = `<span class="spinner"></span> <span>Searching Contacts...</span>`;
+      btn.disabled = true;
+
+      try {
+        showToast(`Searching HR, recruiters & employees for ${company}...`, "info");
+        const res = await fetch('/api/contacts/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ company, contact_type: contactType, location, max_results: 12 })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentDiscoveredContacts = data.contacts || [];
+          document.getElementById('contacts-count').innerText = currentDiscoveredContacts.length;
+
+          // Display Email Pattern Banner
+          if (data.email_patterns && data.email_patterns.domain) {
+            const banner = document.getElementById('company-email-intel-banner');
+            banner.style.display = 'block';
+            document.getElementById('intel-domain').innerText = data.email_patterns.domain;
+            document.getElementById('intel-pattern').innerText = data.email_patterns.example || `first.last@${data.email_patterns.domain}`;
+          }
+
+          renderContactsCards(currentDiscoveredContacts);
+          showToast(`Found ${currentDiscoveredContacts.length} verified contacts for ${company}!`, "success");
+        } else {
+          showToast(data.error || "Failed finding contacts", "error");
+        }
+      } catch (err) {
+        showToast("Error searching contacts", "error");
+      } finally {
+        btn.innerHTML = origText;
+        btn.disabled = false;
+      }
+    });
+  }
+
+  const toggleSavedBtn = document.getElementById('btn-show-saved-contacts');
+  if (toggleSavedBtn) {
+    toggleSavedBtn.addEventListener('click', () => {
+      const section = document.getElementById('saved-contacts-section');
+      if (section.style.display === 'none' || !section.style.display) {
+        section.style.display = 'block';
+        loadSavedContacts();
+        section.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        section.style.display = 'none';
+      }
+    });
+  }
+
+  const refreshSavedBtn = document.getElementById('btn-refresh-saved-contacts');
+  if (refreshSavedBtn) {
+    refreshSavedBtn.addEventListener('click', loadSavedContacts);
+  }
+}
+
+function renderContactsCards(contacts) {
+  const container = document.getElementById('contacts-feed-container');
+  if (!contacts || contacts.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem; color: var(--text-muted);">
+        No contacts found. Try adjusting role filter or company spelling.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = contacts.map(c => {
+    let roleBadgeClass = 'badge-source';
+    if (c.role_category.includes('Recruiter')) roleBadgeClass = 'badge-ats';
+    if (c.role_category.includes('Manager')) roleBadgeClass = 'badge-match';
+    if (c.role_category.includes('Employee')) roleBadgeClass = 'badge-offer';
+
+    return `
+      <div class="job-card" id="contact-card-${c.id}" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div class="job-card-top" style="margin-bottom: 0.5rem;">
+            <div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #fff;">
+                ${escapeHtml(c.name)}
+              </div>
+              <div style="font-size: 0.85rem; color: var(--accent-cyan); font-weight: 500; margin-top: 0.15rem;">
+                ${escapeHtml(c.company)}
+              </div>
+            </div>
+            <span class="badge ${roleBadgeClass}">${escapeHtml(c.role_category)}</span>
+          </div>
+
+          <div style="font-size: 0.825rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 0.75rem;">
+            ${escapeHtml(c.headline)}
+          </div>
+
+          ${c.predicted_email ? `
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.25rem 0.6rem; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.75rem;">
+              <span>📧 Predicted Email:</span>
+              <code style="color: var(--accent-emerald);">${escapeHtml(c.predicted_email)}</code>
+              <button onclick="navigator.clipboard.writeText('${escapeHtml(c.predicted_email)}'); showToast('Email copied!', 'success');" style="background: transparent; border: none; cursor: pointer; color: #fff; font-size: 0.75rem;" title="Copy Email">📋</button>
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="job-card-actions" style="margin-top: 0.75rem;">
+          <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+            <a href="${escapeHtml(c.profile_url)}" target="_blank" class="btn btn-secondary btn-sm" title="Open LinkedIn Profile">
+              🔗 LinkedIn ↗
+            </a>
+            <button class="btn btn-gradient btn-sm" onclick="openOutreachForContact('${c.id}')" title="Generate personalized connection note & referral pitch">
+              ✉️ Draft Outreach
+            </button>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveContactRecord('${c.id}')" title="Save to your networking tracker">
+            💾 Save
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Find HR from any job card directly
+function findCompanyContacts(companyName, location = "Bengaluru, Karnataka, India") {
+  if (!companyName) return;
+  switchTab('tab-contacts');
+  setTimeout(() => {
+    const input = document.getElementById('contact-search-company');
+    const locInput = document.getElementById('contact-search-location');
+    if (input) input.value = companyName;
+    if (locInput && !locInput.value) locInput.value = location;
+    const form = document.getElementById('form-contacts-search');
+    if (form) form.dispatchEvent(new Event('submit'));
+  }, 250);
+}
+
+async function saveContactRecord(contactId) {
+  const contact = currentDiscoveredContacts.find(c => c.id === contactId);
+  if (!contact) return;
+
+  try {
+    const res = await fetch('/api/contacts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contact)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`Saved ${contact.name} to Networking Tracker!`, "success");
+      const card = document.getElementById(`contact-card-${contactId}`);
+      if (card) {
+        const saveBtn = card.querySelector('.btn-primary');
+        if (saveBtn) {
+          saveBtn.className = "btn btn-success btn-sm";
+          saveBtn.innerText = "✓ Saved";
+        }
+      }
+    }
+  } catch (err) {
+    showToast("Failed to save contact", "error");
+  }
+}
+
+async function loadSavedContacts() {
+  try {
+    const res = await fetch('/api/contacts');
+    const data = await res.json();
+    const container = document.getElementById('saved-contacts-table-container');
+    if (!data.success || !data.contacts || data.contacts.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          No saved contacts yet. Search for recruiters above and click "Save"!
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem;">
+              <th style="padding: 0.75rem 0.5rem;">Contact Name</th>
+              <th style="padding: 0.75rem 0.5rem;">Role / Title</th>
+              <th style="padding: 0.75rem 0.5rem;">Company</th>
+              <th style="padding: 0.75rem 0.5rem;">Email / LinkedIn</th>
+              <th style="padding: 0.75rem 0.5rem;">Outreach Status</th>
+              <th style="padding: 0.75rem 0.5rem; text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.contacts.map(c => `
+              <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 0.75rem 0.5rem; font-weight: 600; color: #fff;">${escapeHtml(c.name)}</td>
+                <td style="padding: 0.75rem 0.5rem; color: var(--text-secondary); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(c.headline)}</td>
+                <td style="padding: 0.75rem 0.5rem; color: var(--accent-cyan); font-weight: 600;">${escapeHtml(c.company)}</td>
+                <td style="padding: 0.75rem 0.5rem;">
+                  <div style="display: flex; gap: 0.4rem; align-items: center;">
+                    ${c.profile_url ? `<a href="${escapeHtml(c.profile_url)}" target="_blank" class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem;">LinkedIn ↗</a>` : ''}
+                    ${c.predicted_email ? `<button onclick="navigator.clipboard.writeText('${escapeHtml(c.predicted_email)}'); showToast('Email copied!', 'success');" class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem;">📧</button>` : ''}
+                  </div>
+                </td>
+                <td style="padding: 0.75rem 0.5rem;">
+                  <select class="form-select" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; width: auto;" onchange="updateSavedContactStatus('${c.id}', this.value)">
+                    <option value="Not Contacted" ${c.outreach_status === 'Not Contacted' ? 'selected' : ''}>Not Contacted</option>
+                    <option value="Message Sent" ${c.outreach_status === 'Message Sent' ? 'selected' : ''}>Message Sent</option>
+                    <option value="Connected" ${c.outreach_status === 'Connected' ? 'selected' : ''}>Connected</option>
+                    <option value="Call Scheduled" ${c.outreach_status === 'Call Scheduled' ? 'selected' : ''}>Call Scheduled</option>
+                    <option value="Referred" ${c.outreach_status === 'Referred' ? 'selected' : ''}>🏆 Referred</option>
+                  </select>
+                </td>
+                <td style="padding: 0.75rem 0.5rem; text-align: right;">
+                  <button class="btn btn-secondary btn-sm" style="color: var(--accent-rose); padding: 0.2rem 0.5rem;" onclick="deleteSavedContact('${c.id}')">🗑</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    console.error("Error loading saved contacts:", err);
+  }
+}
+
+async function updateSavedContactStatus(cid, status) {
+  try {
+    const res = await fetch(`/api/contacts/${cid}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`Contact status updated to ${status}`, "success");
+    }
+  } catch (err) {
+    showToast("Failed to update status", "error");
+  }
+}
+
+async function deleteSavedContact(cid) {
+  if (!confirm("Remove this contact?")) return;
+  try {
+    const res = await fetch(`/api/contacts/${cid}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      showToast("Contact removed", "info");
+      loadSavedContacts();
+    }
+  } catch (err) {
+    showToast("Failed to delete contact", "error");
+  }
+}
+
+// ===================================================================
+// Referral & Outreach Studio Modal
+// ===================================================================
+
+function initOutreachModal() {
+  const modal = document.getElementById('modal-outreach');
+  const closeBtn = document.getElementById('btn-close-outreach-modal');
+  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.remove('active'));
+
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.remove('active');
+    });
+  }
+
+  // Live char counter for LinkedIn connection note
+  const noteArea = document.getElementById('modal-conn-note-text');
+  const counter = document.getElementById('char-counter');
+  if (noteArea && counter) {
+    noteArea.addEventListener('input', () => {
+      const len = noteArea.value.length;
+      counter.innerText = `${len} / 300`;
+      counter.style.color = len > 300 ? 'var(--accent-rose)' : 'var(--accent-cyan)';
+    });
+  }
+
+  // Strategy change or regenerate listener
+  const stratSelect = document.getElementById('outreach-strategy-select');
+  if (stratSelect) stratSelect.addEventListener('change', fetchAndRenderOutreach);
+
+  const regenBtn = document.getElementById('btn-regenerate-outreach');
+  if (regenBtn) regenBtn.addEventListener('click', fetchAndRenderOutreach);
+
+  // Copy buttons
+  const copyNoteBtn = document.getElementById('btn-copy-modal-conn-note');
+  if (copyNoteBtn) {
+    copyNoteBtn.addEventListener('click', () => {
+      const note = document.getElementById('modal-conn-note-text').value;
+      if (!note) return;
+      navigator.clipboard.writeText(note);
+      showToast("LinkedIn Connection Note copied to clipboard!", "success");
+    });
+  }
+
+  const copyEmailBtn = document.getElementById('btn-copy-modal-full-msg');
+  if (copyEmailBtn) {
+    copyEmailBtn.addEventListener('click', () => {
+      const subj = document.getElementById('modal-email-subject').value;
+      const body = document.getElementById('modal-full-msg-text').value;
+      const fullText = `Subject: ${subj}\n\n${body}`;
+      navigator.clipboard.writeText(fullText);
+      showToast("Full InMail / Email draft copied to clipboard!", "success");
+    });
+  }
+
+  const saveFromModalBtn = document.getElementById('btn-save-contact-from-modal');
+  if (saveFromModalBtn) {
+    saveFromModalBtn.addEventListener('click', async () => {
+      if (!activeOutreachContact) return;
+      await saveContactRecord(activeOutreachContact.id);
+      modal.classList.remove('active');
+    });
+  }
+}
+
+function openOutreachForContact(contactId) {
+  const contact = currentDiscoveredContacts.find(c => c.id === contactId);
+  if (!contact) return;
+
+  activeOutreachContact = contact;
+  const modal = document.getElementById('modal-outreach');
+  modal.classList.add('active');
+
+  document.getElementById('modal-outreach-subtitle').innerText = `Target: ${contact.name} (${contact.role_category}) @ ${contact.company}`;
+  document.getElementById('btn-modal-open-linkedin').href = contact.profile_url || '#';
+
+  // Auto-detect best strategy based on role
+  const stratSelect = document.getElementById('outreach-strategy-select');
+  if (contact.role_category.includes('Recruiter')) stratSelect.value = 'recruiter';
+  else if (contact.role_category.includes('Manager')) stratSelect.value = 'manager';
+  else stratSelect.value = 'referral';
+
+  // Fill target role from candidate profile title or default
+  const roleInput = document.getElementById('outreach-target-role');
+  if (!roleInput.value && currentProfile && currentProfile.title) {
+    roleInput.value = currentProfile.title;
+  }
+
+  fetchAndRenderOutreach();
+}
+
+async function fetchAndRenderOutreach() {
+  if (!activeOutreachContact) return;
+
+  const strategy = document.getElementById('outreach-strategy-select').value;
+  const targetRole = document.getElementById('outreach-target-role').value.trim() || 'Software Engineer';
+
+  const noteArea = document.getElementById('modal-conn-note-text');
+  const subjInput = document.getElementById('modal-email-subject');
+  const bodyArea = document.getElementById('modal-full-msg-text');
+  const counter = document.getElementById('char-counter');
+
+  noteArea.value = "Crafting personalized LinkedIn connection note...";
+  bodyArea.value = "Generating high-converting outreach message...";
+
+  try {
+    const res = await fetch('/api/contacts/outreach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contact_name: activeOutreachContact.name,
+        contact_role: activeOutreachContact.headline || activeOutreachContact.role_category,
+        company: activeOutreachContact.company,
+        target_role: targetRole,
+        outreach_type: strategy
+      })
+    });
+    const data = await res.json();
+    if (data.success && data.outreach) {
+      noteArea.value = data.outreach.connection_note || '';
+      subjInput.value = data.outreach.email_subject || '';
+      bodyArea.value = data.outreach.full_message || '';
+
+      const len = noteArea.value.length;
+      counter.innerText = `${len} / 300`;
+      counter.style.color = len > 300 ? 'var(--accent-rose)' : 'var(--accent-cyan)';
+    }
+  } catch (err) {
+    showToast("Failed to generate outreach pitch", "error");
+  }
 }
 
 // --- Helpers ---

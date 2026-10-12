@@ -11,13 +11,22 @@ An intelligent, end-to-end automation suite for discovering high-signal job oppo
 
 ## ✨ Key Features
 
-### 1. 🎯 LinkedIn Job Search URL Scraper
-- **Public Guest API Extraction:** Scrapes jobs directly without requiring personal LinkedIn credentials or Selenium overhead.
-- **Search URL Support:** Paste any LinkedIn search link (e.g., `https://www.linkedin.com/jobs/search?keywords=Python&location=San+Francisco`) or search by role and location directly.
-- **Enriched Job Metadata:** Extracts Job Title, Company, Location, Date Posted, Direct Application Link, and Job Description.
+### 1. 🎯 LinkedIn Job Search URL Scraper (Authenticated & Public)
+- **Authenticated Search URL Parsing:** Paste any URL copied straight from your logged-in browser session (e.g. `https://www.linkedin.com/jobs/search/?currentJobId=3948572834&keywords=Python&location=Bengaluru&geoId=105214831&f_TPR=r86400&f_WT=1%2C2`).
+  - Automatically captures the currently viewed job (`currentJobId`) with full descriptions.
+  - Automatically inherits and honors your authenticated search filters: Time Posted (`f_TPR`), Work Type (`f_WT`), Experience Level (`f_E`), Job Type (`f_JT`), Easy Apply (`f_AL`), and Company filters.
+- **Optional Member Session Cookie (`li_at`):** Provide your `li_at` session cookie to scrape member-only jobs, 1st-degree connection postings, and private recommendations without getting blocked.
+- **Public Guest API Fallback:** Works immediately out of the box even without credentials or session cookies.
 - **Automatic Company Discovery:** Links each job post directly to the company's official career portal and ATS.
 
-### 2. 🔍 Google Search & Direct ATS Finder (No Spam)
+### 2. 🇮🇳 Bengaluru & Karnataka Tech Job Optimizer (Silicon Valley of India)
+- **Multi-Option Role & Hub Select:** Concurrently target multiple tech roles (`Full Stack Developer`, `Python Developer`, `Backend Engineer`, `React`, `DevOps`) and key tech hubs (`Bellandur / ORR`, `Koramangala / HSR`, `Whitefield`, `Electronic City`, `Manyata Tech Park`, `Indiranagar`).
+- **Bengaluru GeoID Integration:** Uses LinkedIn's official Bengaluru Metropolitan Area geo identifier (`geoId = 105214831`) for high-precision metro targeting.
+- **Bilingual Geographic Matcher:** Automatically expands queries with Boolean `("Bengaluru" OR "Bangalore" OR "Bengaluru, Karnataka")` across ATS engines.
+- **Top Unicorn Portals & ATS:** Direct links to top Bengaluru tech ecosystems (Flipkart, Swiggy, Razorpay, CRED, Zepto, Google India) + Indian ATS portals (`darwinbox.in`, `greenhouse.io`, `lever.co`, `ashbyhq.com`).
+- **⚡ 1-Click Quick Search:** Aggregates and ranks jobs from direct ATS platforms and LinkedIn simultaneously with ATS compatibility scores.
+
+### 3. 🔍 Google Search & Direct ATS Finder (No Spam)
 - **Targeted Discovery:** Search by **Role**, **Location**, **Experience Level**, and **Work Arrangement** (Remote, Hybrid, On-site).
 - **Direct ATS Dorking:** Built-in search operators filter out aggregator spam and focus strictly on direct applicant tracking systems:
   - `boards.greenhouse.io`
@@ -25,26 +34,35 @@ An intelligent, end-to-end automation suite for discovering high-signal job oppo
   - `jobs.ashbyhq.com`
   - `myworkdayjobs.com`
   - `apply.workable.com`
+  - `darwinbox.in` (leading enterprise ATS in India)
 - **Preference Keywords:** Add required skills or stacks (e.g., `Python, React, AWS, Docker`) to pinpoint dream openings.
 
-### 3. 🏢 Company Career Sites & ATS Explorer
+### 3. 👥 HR, Recruiters & Employee Referral Intelligence
+- **LinkedIn X-Ray Contact Finder:** Uncovers verified **Technical Recruiters**, **Talent Acquisition Specialists**, **Engineering Managers**, and **Team Members/Alumni** for any target company.
+- **Enterprise Email Pattern Predictor:** Predicts corporate email formats (e.g., `first.last@company.com`, `first@company.com`) for direct outreach.
+- **Personalized Referral Message Studio:**
+  - ⚡ **LinkedIn Connection Request Note:** Tailored strictly under 300 characters to fit LinkedIn's free invitation limits.
+  - ✉️ **InMail & Cold Email Drafts:** Custom pitches for internal employee referrals, recruiter follow-ups, and hiring manager inquiries.
+- **Networking Tracker:** Save contacts and track outreach status (`Not Contacted` ➔ `Message Sent` ➔ `Connected` ➔ `Call Scheduled` ➔ `Referred`).
+
+### 4. 🏢 Company Career Sites & ATS Explorer
 - **Instant Career Portal Lookup:** Enter any company name (e.g., *Stripe, OpenAI, Spotify, Figma*) or domain to instantly detect their official career site and underlying ATS platform.
 - **Direct Apply Links:** Bypass third-party job boards to apply directly on company hiring systems.
 
-### 4. 📄 LaTeX CV Studio & ATS Tailoring
+### 5. 📄 LaTeX CV Studio & ATS Tailoring
 - **Gold-Standard ATS Template:** Single-column, battle-tested modern LaTeX resume layout (Jake's Resume / Clean Academic-Industry style).
 - **Special Character Escaping:** Comprehensive LaTeX character sanitization (`%`, `&`, `$`, `#`, `_`, `{`, `}`, `~`, `^`) prevents compilation errors.
 - **AI STAR Bullet Tailoring:** Dynamically tailors your experience bullet points to match the target job's keywords using the Google XYZ / STAR formula.
 - **1-Click Overleaf Export:** Built-in "Open in Overleaf" button sends LaTeX code directly to Overleaf for instant cloud PDF compiling in your browser.
 - **Local PDF Compilation:** Automatically compiles with `pdflatex` or `tectonic` if installed on your machine.
 
-### 5. 🤖 AI Job Description Analyzer & Outreach Generator
+### 6. 🤖 AI Job Description Analyzer & Outreach Generator
 - **Deep ATS Breakdown:** Extracts Role, Experience Level, Core Skills, ATS Keywords, and Responsibilities.
 - **Compatibility Match Score:** Computes a 0–100% compatibility rating against your master profile with gap analysis (matched vs. missing skills).
 - **Cold Outreach Writer:** Automatically crafts high-converting LinkedIn InMail messages and tailored cover letters for hiring managers.
 - **Offline Fallback:** Features a built-in heuristic NLP/regex engine that works offline even without an AI API key!
 
-### 6. 📋 Kanban Pipeline & Dual Persistence
+### 7. 📋 Kanban Pipeline & Dual Persistence
 - **Interactive Kanban Board:** Move jobs seamlessly through `Wishlist` ➔ `Applied` ➔ `Interviewing` ➔ `Offer` ➔ `Rejected`.
 - **⚡ 1-Click Apply:** Opens application portals and automatically updates status to "Applied" with timestamps.
 - **Dual Persistence:** Always-ready local SQLite database (`jobs.db`) + optional 1-click sync to **Google Sheets** via `gspread`.
