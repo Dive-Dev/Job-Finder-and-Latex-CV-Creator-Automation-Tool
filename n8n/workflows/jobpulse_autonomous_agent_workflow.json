@@ -1,0 +1,142 @@
+{
+  "name": "JobPulse AI Daily Pipeline & Agent Auto-Training",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "1",
+      "name": "Morning Schedule (8:00 AM Weekdays)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "path": "jobpulse-trigger",
+        "options": {}
+      },
+      "id": "2",
+      "name": "Manual Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 480],
+      "webhookId": "jobpulse-trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:5000/api/agent/run",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"target_roles\": \"Full Stack Developer, Python Developer, Software Engineer\",\n  \"target_companies\": \"Sandisk, Amazon, Swiggy, Zepto, Razorpay\",\n  \"target_location\": \"Bengaluru, Karnataka, India\",\n  \"min_match_threshold\": 75,\n  \"auto_tailor_cv\": true,\n  \"auto_find_hr\": true\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "3",
+      "name": "1. Launch Autonomous Job Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 380]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:5000/api/company/research",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"company\": \"Sandisk\",\n  \"human_pacing\": true\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "4",
+      "name": "2. Human Crawler: Study Company, Products & Clients",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [700, 380]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:5000/api/agent/train",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "5",
+      "name": "3. Auto-Train Agent (Pre & Post Processing)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [920, 380]
+    },
+    {
+      "parameters": {
+        "content": "### 🚀 JobPulse AI Daily Autonomous Report\n- **Target Metro:** Bengaluru, Karnataka, India\n- **Jobs Discovered & Scored:** {{ $json.jobs_analyzed || 'Completed' }}\n- **Company Intel Studied:** Products, Clients & Architecture extracted\n- **Agent Training:** Pre/Post-processing reinforced\n- **Ready:** LaTeX CVs & Cover Letters compiled for 1-click application.",
+        "height": 180,
+        "width": 380
+      },
+      "id": "6",
+      "name": "Daily Summary Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1140, 320]
+    }
+  ],
+  "connections": {
+    "Morning Schedule (8:00 AM Weekdays)": {
+      "main": [
+        [
+          {
+            "node": "1. Launch Autonomous Job Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "1. Launch Autonomous Job Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Launch Autonomous Job Agent": {
+      "main": [
+        [
+          {
+            "node": "2. Human Crawler: Study Company, Products & Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Human Crawler: Study Company, Products & Clients": {
+      "main": [
+        [
+          {
+            "node": "3. Auto-Train Agent (Pre & Post Processing)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {}
+}

@@ -1,0 +1,26 @@
+{
+  "last_trained_at": "2026-10-11 23:22:25",
+  "training_epochs_completed": 1,
+  "preprocessing_metrics": {
+    "stop_words_learned": 47,
+    "job_title_clusters": 12,
+    "ats_noise_filters_active": true,
+    "clean_text_efficiency": 0.965
+  },
+  "postprocessing_metrics": {
+    "star_bullet_optimization_score": 0.922,
+    "cover_letter_hook_affinity": 0.942,
+    "outreach_conversion_weight": 0.88,
+    "learned_few_shot_examples": 25
+  },
+  "learned_keywords": [
+    "Full Stack Architecture",
+    "Microservices",
+    "Latency Optimization",
+    "High-Throughput",
+    "PostgreSQL",
+    "Distributed Systems",
+    "Kubernetes",
+    "CI/CD Automation"
+  ]
+}

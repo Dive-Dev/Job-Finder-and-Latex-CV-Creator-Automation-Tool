@@ -23,7 +23,7 @@ An intelligent, end-to-end automation suite for discovering high-signal job oppo
 - **Multi-Option Role & Hub Select:** Concurrently target multiple tech roles (`Full Stack Developer`, `Python Developer`, `Backend Engineer`, `React`, `DevOps`) and key tech hubs (`Bellandur / ORR`, `Koramangala / HSR`, `Whitefield`, `Electronic City`, `Manyata Tech Park`, `Indiranagar`).
 - **Bengaluru GeoID Integration:** Uses LinkedIn's official Bengaluru Metropolitan Area geo identifier (`geoId = 105214831`) for high-precision metro targeting.
 - **Bilingual Geographic Matcher:** Automatically expands queries with Boolean `("Bengaluru" OR "Bangalore" OR "Bengaluru, Karnataka")` across ATS engines.
-- **Top Unicorn Portals & ATS:** Direct links to top Bengaluru tech ecosystems (Flipkart, Swiggy, Razorpay, CRED, Zepto, Google India) + Indian ATS portals (`darwinbox.in`, `greenhouse.io`, `lever.co`, `ashbyhq.com`).
+- **Top Unicorn Portals & ATS:** Direct links to top Bengaluru tech ecosystems (Flipkart, Swiggy, Razorpay, CRED, Zepto, Google India) + Indian and global ATS portals (`darwinbox.in`, `greenhouse.io`, `lever.co`, `smartrecruiters.com`, `myworkdayjobs.com`).
 - **⚡ 1-Click Quick Search:** Aggregates and ranks jobs from direct ATS platforms and LinkedIn simultaneously with ATS compatibility scores.
 
 ### 3. 🔍 Google Search & Direct ATS Finder (No Spam)
@@ -31,10 +31,10 @@ An intelligent, end-to-end automation suite for discovering high-signal job oppo
 - **Direct ATS Dorking:** Built-in search operators filter out aggregator spam and focus strictly on direct applicant tracking systems:
   - `boards.greenhouse.io`
   - `jobs.lever.co`
-  - `jobs.ashbyhq.com`
   - `myworkdayjobs.com`
   - `apply.workable.com`
   - `darwinbox.in` (leading enterprise ATS in India)
+  - `smartrecruiters.com`
 - **Preference Keywords:** Add required skills or stacks (e.g., `Python, React, AWS, Docker`) to pinpoint dream openings.
 
 ### 3. 👥 HR, Recruiters & Employee Referral Intelligence
@@ -45,9 +45,11 @@ An intelligent, end-to-end automation suite for discovering high-signal job oppo
   - ✉️ **InMail & Cold Email Drafts:** Custom pitches for internal employee referrals, recruiter follow-ups, and hiring manager inquiries.
 - **Networking Tracker:** Save contacts and track outreach status (`Not Contacted` ➔ `Message Sent` ➔ `Connected` ➔ `Call Scheduled` ➔ `Referred`).
 
-### 4. 🏢 Company Career Sites & ATS Explorer
-- **Instant Career Portal Lookup:** Enter any company name (e.g., *Stripe, OpenAI, Spotify, Figma*) or domain to instantly detect their official career site and underlying ATS platform.
-- **Direct Apply Links:** Bypass third-party job boards to apply directly on company hiring systems.
+### 4. 🏢 Company Career Sites Explorer & Live Crawler
+- **Curated Lookups Registry (60+ Employers):** Instant zero-latency lookups for top tech employers (Amazon, Google, Microsoft, Sandisk / Western Digital, Qualcomm, Nvidia, Swiggy, Flipkart, Zepto, Razorpay, Infosys, etc.).
+- **Multi-Company Batch Search:** Enter single or comma-separated company names (e.g. `Sandisk, Amazon, Swiggy`) to look up and crawl multiple career portals in one go.
+- **Live Career Site Crawler:** Automatically crawls target career pages to extract verified page titles, descriptions, and clickable live open role listings.
+- **Direct ATS Integration:** Identifies and links directly to underlying ATS platforms (Workday, Greenhouse, Lever, SmartRecruiters, Darwinbox, Direct Portals) with complete elimination of defunct/broken Ashby redirects.
 
 ### 5. 📄 LaTeX CV Studio & ATS Tailoring
 - **Gold-Standard ATS Template:** Single-column, battle-tested modern LaTeX resume layout (Jake's Resume / Clean Academic-Industry style).
@@ -62,10 +64,15 @@ An intelligent, end-to-end automation suite for discovering high-signal job oppo
 - **Cold Outreach Writer:** Automatically crafts high-converting LinkedIn InMail messages and tailored cover letters for hiring managers.
 - **Offline Fallback:** Features a built-in heuristic NLP/regex engine that works offline even without an AI API key!
 
-### 7. 📋 Kanban Pipeline & Dual Persistence
-- **Interactive Kanban Board:** Move jobs seamlessly through `Wishlist` ➔ `Applied` ➔ `Interviewing` ➔ `Offer` ➔ `Rejected`.
-- **⚡ 1-Click Apply:** Opens application portals and automatically updates status to "Applied" with timestamps.
-- **Dual Persistence:** Always-ready local SQLite database (`jobs.db`) + optional 1-click sync to **Google Sheets** via `gspread`.
+### 7. 📊 Sheets-Based Tabular UI & Multi-Selection Batch System
+- **Dense Google Sheets Grid View:** Full spreadsheet-style interface featuring sticky headers, zebra rows, monospace timestamps, and inline status dropdown cells.
+- **Multi-Selection Checkbox Engine:** Select individual rows or use the master "Select All" toggle across Discovery and Pipeline views.
+- **Batch Action Toolbar:**
+  - 🗑️ **Delete Selected (N):** Remove multiple applications from both UI and database in a single transaction.
+  - 🚀 **Batch Status Update:** Transition selected opportunities across `Wishlist`, `Applied`, `Interviewing`, `Offer`, or `Rejected`.
+  - 📊 **Push Selected to Sheets:** Sync selected jobs to Google Sheets.
+- **Togglable Pipeline Views:** Seamlessly switch between the new dense **Sheets View** and the classic **Kanban Board**.
+
 
 ---
 
@@ -202,36 +209,108 @@ cp .env.example .env
    - **Location:** e.g., `Remote`
    - **Experience:** `Mid level` or `Senior`
    - **Tech Stack:** `Python, React, Docker`
-2. Keep **Direct ATS filter** checked to search directly on Greenhouse, Lever, Ashby, and Workday.
+2. Keep **Direct ATS filter** checked to search directly on Greenhouse, Lever, Workday, and Darwinbox.
 3. Click **"Search Direct Opportunities"**.
 
-### 3. Generating & Tailoring your LaTeX CV
-1. Open the **LaTeX CV Studio** tab.
-2. Update your master information (Education, Experience, Projects, Skills).
-3. Select any tracked job from the dropdown to tailor your resume for that specific company.
-4. Click **"AI STAR Tailoring"** or **"Generate LaTeX CV"**.
-5. The system generates ATS-ready LaTeX code in the editor pane.
-6. Click **"🍃 Open Overleaf"** to open and compile the PDF with 1-click in the cloud, or **"Download .tex"** to compile locally.
+### 6. ✉️ Cover Letter Studio & AI Tailoring
+- **ATS-Compliant LaTeX Template:** Single-page executive cover letter matching the exact typography and header layout of your LaTeX CV.
+- **AI Content Generation:** Tailors a structured 4-paragraph cover letter using your Local Model (Ollama/LM Studio) or Gemini:
+  1. *Opening hook & high-impact positioning*
+  2. *Core achievement & quantifiable metrics aligned with JD requirements*
+  3. *Technical alignment & domain passion*
+  4. *Professional call-to-action & request for interview*
+- **Live Interactive Editor:** Edit paragraphs in real-time, view formatted text, or switch to raw LaTeX mode.
+- **1-Click Export:** Download formatted `.tex`, compile local `.pdf`, or click **"🍃 Open Overleaf"** for cloud PDF generation.
 
-### 4. 1-Click Application & Kanban Tracking
-1. Open the **Pipeline** tab to view your active application board.
-2. Click **⚡ 1-Click Apply** on any job card. It will open the company application portal in a new tab and update the job to **"Applied"**.
-3. Drag or update statuses between **Wishlist**, **Applied**, **Interviewing**, **Offer**, and **Rejected**.
-4. Click **"Push to Sheets"** to sync your updated pipeline to Google Sheets.
+### 7. 🤖 Autonomous Job Search Agent & Local LLM Integration
+- **Local Model Support:** Seamlessly connect to your self-hosted **Ollama** (`http://localhost:11434`) or **LM Studio** (`http://localhost:1234`) running models like `llama3`, `mistral`, `deepseek-coder`, `qwen2.5`, or `phi3`.
+- **Autonomous Multi-Stage Pipeline:** Runs discovery, company lookups, live career crawlers, ATS scoring, LaTeX CV tailoring, Cover Letter generation, and recruiter scouting end-to-end.
+- **Live Terminal & Telemetry:** Real-time logging terminal, animated progress tracking, and structured deliverables table.
+
+---
+
+## 🎨 Modern Designer UI: React JS + Chakra UI
+
+JobPulse AI features a designer-grade interface built with **React 18** and **Chakra UI v2**:
+- **Aesthetic:** Deep obsidian dark mode (`#0a0d14`), electric indigo / cyan / cyber violet glowing accents, and glassmorphism.
+- **Typography:** Google Fonts (`Plus Jakarta Sans` for sleek UI typography and `JetBrains Mono` for code & terminal).
+- **Interactive Tabs:**
+  - 🤖 **Autonomous Agent:** Mission directives, model configuration, live progress, and deliverables.
+  - ✉️ **Cover Letter Studio:** 4-paragraph ATS generator, live preview, LaTeX viewer, and Overleaf export.
+  - 🎯 **Discovery:** Authenticated LinkedIn URL crawler and Google ATS search.
+  - 🏢 **Company Sites:** 60+ curated company portals, direct live vacancy scraper.
+  - 🌐 **Company Intel:** Human-like crawler studying products, clients, tech stack, and interview hooks.
+  - 📋 **Pipeline:** Google Sheets-style tabular grid & Kanban board, multi-selection batch delete and apply.
+  - 📄 **LaTeX CV Studio:** Candidate profile editor, AI STAR bullet tailoring, live LaTeX editor.
+  - ✉️ **Cover Letter Studio:** 4-paragraph ATS generator, live preview, LaTeX viewer, and Overleaf export.
+  - 🎯 **Interview Prep Studio:** Role-specific technical Q&A, product talking points, behavioral STAR scenarios, and interactive mock simulator.
+  - 👥 **People & Referrals:** Hunter.io / Apollo.io / RocketReach style contact scraper with corporate email confidence and direct SMTP referral dispatch.
+  - 🔍 **AI JD Inspector:** ATS circular score gauge, matched vs missing skills breakdown.
+  - ⚙️ **Settings:** SMTP mailer configuration, Agent Continuous Learning, Google Sheets sync, and API keys.
+
+---
+
+## 🐳 Docker & n8n Orchestration
+
+You can run the entire JobPulse AI suite and automated n8n workflows with Docker Compose:
+
+```bash
+# Build and run JobPulse AI and n8n
+docker-compose up -d
+```
+
+- **JobPulse AI Web Studio:** [http://localhost:5000](http://localhost:5000)
+- **n8n Workflow Automation Platform:** [http://localhost:5678](http://localhost:5678)
+- **Pre-built Workflow:** Located at `n8n/workflows/jobpulse_autonomous_agent_workflow.json` (runs scheduled morning crawls, company studying, and agent auto-training).
+
+---
+
+## 🚀 Local Quick Start Guide
+
+### 1. Prerequisites
+- **Python 3.10+**
+- **Node.js 18+** & npm
+
+### 2. Setup Backend
+```bash
+# Clone the repository
+git clone https://github.com/Dive-Dev/Job-Finder-and-Latex-CV-Creator-Automation-Tool.git
+cd "Job Finder and Latex CV Creator Automation Tool"
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Run backend server
+python app.py
+```
+Backend will be available at `http://localhost:5000`.
+
+### 3. Setup React + Chakra UI Frontend (Optional Dev Server)
+The compiled React production build is already pre-bundled and served automatically by Flask at `http://localhost:5000`.
+To run the Vite dev server with Hot Module Replacement:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Vite dev server will start at `http://localhost:3000` (auto-proxying `/api` requests to Flask on port 5000).
 
 ---
 
 ## 🛠️ Technology Stack
 
+- **Frontend:** React 18, Chakra UI v2, Framer Motion, Emotion, React Icons, Vite (100% Fully Responsive)
 - **Backend:** Python 3.10+, Flask, SQLite
-- **Web Scraping:** BeautifulSoup4, Requests, Public LinkedIn Guest API, DuckDuckGo / Google Search Dorking
-- **AI & ATS Intelligence:** Google Gemini AI (`google-generativeai`) + Offline Rule-Based NLP Heuristics
-- **LaTeX Engine:** ATS-Optimized Single Column Template, Special Character Sanitizer, Overleaf Snip API
-- **Google Sheets:** `gspread`, `oauth2client`
-- **Frontend:** Vanilla HTML5, CSS3 Glassmorphism System, Reactive JavaScript
+- **Workflow Automation & Orchestration:** n8n, Docker, Docker Compose
+- **Web Scraping & Intelligence:** Human-like Web Crawler, Apollo/Hunter/RocketReach People Engine, LinkedIn Guest API, Google ATS Dorking
+- **AI & LLM Engines:** Local Models (Ollama, LM Studio: Llama 3, Mistral, DeepSeek) + Google Gemini API + Agent Continuous Learning
+- **Outreach & Communication:** SMTP Mailer (SSL/TLS), Mailto fallback, LaTeX Resume & Cover Letter Attachments
+- **LaTeX Engine:** ATS-Optimized Clean Resume & Cover Letter Templates, Character Sanitizer, Overleaf Snip API
+- **Cloud Database / Sync:** Google Sheets API (`gspread`, `oauth2client`) + SQLite local cache
 
 ---
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+

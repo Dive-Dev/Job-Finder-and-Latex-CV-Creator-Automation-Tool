@@ -66,6 +66,16 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS company_research (
+            id TEXT PRIMARY KEY,
+            company_name TEXT UNIQUE,
+            website TEXT,
+            dossier_data TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     
     conn.commit()
     conn.close()
@@ -214,6 +224,22 @@ def delete_job(job_id):
     conn.close()
     return True
 
+def delete_jobs_batch(job_ids):
+    """
+    Deletes multiple jobs by their IDs in a single transaction.
+    """
+    if not job_ids:
+        return 0
+    conn = get_connection()
+    cursor = conn.cursor()
+    placeholders = ','.join(['?'] * len(job_ids))
+    cursor.execute(f"DELETE FROM jobs WHERE id IN ({placeholders})", tuple(job_ids))
+    count = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return count
+
+
 def get_stats():
     conn = get_connection()
     cursor = conn.cursor()
@@ -323,6 +349,77 @@ def delete_contact(contact_id):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM contacts WHERE id = ?", (contact_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+# --- COMPANY RESEARCH DOSSIERS ---
+
+def save_company_research(company_name, website, dossier_dict):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cid = str(uuid.uuid4())
+    norm_name = company_name.strip()
+    data_str = json.dumps(dossier_dict, ensure_ascii=False)
+    cursor.execute('''
+        INSERT INTO company_research (id, company_name, website, dossier_data, updated_at)
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(company_name) DO UPDATE SET
+            website = excluded.website,
+            dossier_data = excluded.dossier_data,
+            updated_at = CURRENT_TIMESTAMP
+    ''', (cid, norm_name, website or '', data_str))
+    conn.commit()
+    conn.close()
+    return True
+
+def get_company_research(company_name):
+    conn = get_connection()
+    cursor = conn.cursor()
+    norm = company_name.strip().lower()
+    cursor.execute("SELECT * FROM company_research WHERE LOWER(company_name) = ? OR LOWER(company_name) LIKE ?", (norm, f"%{norm}%"))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        try:
+            dossier = json.loads(row['dossier_data'])
+            return dossier
+        except Exception:
+            return None
+    return None
+
+def list_all_company_research():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT company_name, website, updated_at, dossier_data FROM company_research ORDER BY updated_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    results = []
+    for r in rows:
+        try:
+            dossier = json.loads(r['dossier_data'])
+            results.append({
+                "company_name": r['company_name'],
+                "website": r['website'],
+                "updated_at": r['updated_at'],
+                "tagline": dossier.get('tagline', ''),
+                "industry": dossier.get('industry', ''),
+                "products_count": len(dossier.get('products', [])),
+                "clients_count": len(dossier.get('clients_and_customers', [])),
+            })
+        except Exception:
+            results.append({
+                "company_name": r['company_name'],
+                "website": r['website'],
+                "updated_at": r['updated_at'],
+            })
+    return results
+
+def delete_company_research(company_name):
+    conn = get_connection()
+    cursor = conn.cursor()
+    norm = company_name.strip().lower()
+    cursor.execute("DELETE FROM company_research WHERE LOWER(company_name) = ?", (norm,))
     conn.commit()
     conn.close()
     return True

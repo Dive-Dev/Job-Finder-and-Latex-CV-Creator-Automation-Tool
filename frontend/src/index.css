@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --palette-blue: #525FE1;
+  --palette-orange: #F86F03;
+  --palette-yellow: #FFA41B;
+  --palette-cream: #FFF6F4;
+  --palette-blue-rgb: 82, 95, 225;
+  --palette-orange-rgb: 248, 111, 3;
+  --palette-yellow-rgb: 255, 164, 27;
+  --palette-cream-rgb: 255, 246, 244;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+  min-height: 100vh;
+  background-color: #0a0d16;
+  color: #FFF6F4;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==========================================================================
+   High-Visibility Custom Scrollbars (Horizontal & Vertical)
+   Utilizing user palette:
+   - Base Blue: #525FE1 rgb(82, 95, 225)
+   - Sunset Orange (Hover): #F86F03 rgb(248, 111, 3)
+   - Amber Yellow (Active): #FFA41B rgb(255, 164, 27)
+   - Cream Border/Contrast: #FFF6F4 rgb(255, 246, 244)
+   ========================================================================== */
+
+/* Cross-browser standard scrollbar styling (Firefox & modern browsers) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #525FE1 #0d1120;
+}
+
+/* WebKit Scrollbars: High visibility for both horizontal & vertical */
+::-webkit-scrollbar {
+  width: 10px;  /* Vertical scrollbar width */
+  height: 10px; /* Horizontal scrollbar height */
+}
+
+::-webkit-scrollbar-track {
+  background: #0d1120;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 246, 244, 0.08);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #525FE1; /* High-visibility royal blue */
+  border-radius: 6px;
+  border: 2px solid #0d1120; /* Inset padding for crisp contrast */
+  box-shadow: inset 0 0 6px rgba(255, 246, 244, 0.25);
+  min-height: 28px;
+  min-width: 28px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #F86F03; /* Vivid sunset orange */
+  border: 2px solid #0d1120;
+  box-shadow: 0 0 10px rgba(248, 111, 3, 0.65);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #FFA41B; /* Bright golden yellow while dragging */
+  border: 2px solid #0d1120;
+  box-shadow: 0 0 12px rgba(255, 164, 27, 0.85);
+}
+
+::-webkit-scrollbar-corner {
+  background: #0d1120;
+  border: 1px solid rgba(255, 246, 244, 0.08);
+}
+
+/* Scroll utility classes for containers needing explicit overflow */
+.custom-scroll,
+.overflow-auto-styled {
+  overflow: auto !important;
+}
+
+.custom-scroll-x {
+  overflow-x: auto !important;
+}
+
+.custom-scroll-y {
+  overflow-y: auto !important;
+}
+
+/* Spin animation for refresh buttons */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Code and Mono text font */
+code, pre, .font-mono {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+/* Palette Glow & Gradient utility classes */
+.glow-blue {
+  box-shadow: 0 0 25px rgba(82, 95, 225, 0.35);
+}
+
+.glow-orange {
+  box-shadow: 0 0 25px rgba(248, 111, 3, 0.35);
+}
+
+.glow-yellow {
+  box-shadow: 0 0 25px rgba(255, 164, 27, 0.35);
+}
+
+.gradient-retro {
+  background: linear-gradient(135deg, #525FE1 0%, #F86F03 60%, #FFA41B 100%);
+}
+
+.gradient-sunset {
+  background: linear-gradient(135deg, #F86F03 0%, #FFA41B 100%);
+}
+
+.gradient-royal {
+  background: linear-gradient(135deg, #525FE1 0%, #8f98f3 100%);
+}

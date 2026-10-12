@@ -1,0 +1,10 @@
+{
+  "provider": "local_openai",
+  "ollama_url": "http://localhost:11434",
+  "openai_url": "http://localhost:1234/v1",
+  "model": "local-model",
+  "temperature": 0.2,
+  "timeout": 45,
+  "base_url": "http://localhost:1234/v1",
+  "model_name": "local-model"
+}

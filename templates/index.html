@@ -30,6 +30,9 @@
       <button class="nav-tab-btn" data-tab="tab-companies" id="nav-btn-companies">
         🏢 <span>Company Sites</span>
       </button>
+      <button class="nav-tab-btn" data-tab="tab-agent" id="nav-btn-agent" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.4);">
+        🤖 <span style="font-weight: 700; color: #a5b4fc;">Autonomous Agent</span>
+      </button>
       <button class="nav-tab-btn" data-tab="tab-pipeline" id="nav-btn-pipeline">
         📋 <span>Pipeline</span>
       </button>
@@ -223,7 +226,7 @@
           <div class="card-header">
             <div>
               <div class="card-title">🔍 Google Search & Direct ATS Finder</div>
-              <div class="card-description">Target direct career portals (Greenhouse, Lever, Ashby, Workday) with zero spam.</div>
+              <div class="card-description">Target direct career portals (Greenhouse, Lever, Workday, Darwinbox) with zero spam.</div>
             </div>
             <span class="badge badge-ats">Direct ATS Dorks</span>
           </div>
@@ -267,7 +270,7 @@
             <div class="form-group">
               <label class="checkbox-label">
                 <input type="checkbox" id="google-ats-only" checked>
-                <span>Direct ATS filter: Target Greenhouse, Lever, Ashby, Workday, Darwinbox portals</span>
+                <span>Direct ATS filter: Target Greenhouse, Lever, Workday, Darwinbox, SmartRecruiters portals</span>
               </label>
             </div>
             <button type="submit" class="btn btn-gradient" id="btn-scrape-google" style="width: 100%;">
@@ -277,55 +280,121 @@
         </div>
       </div>
 
-      <!-- Discovery Results Feed -->
+      <!-- Discovery Results Feed (Sheets-Based Data Grid) -->
       <div class="glass-card" style="margin-top: 1.5rem;">
-        <div class="card-header">
+        <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
           <div>
-            <div class="card-title">📋 Discovery Stream (<span id="discovery-count">0</span> Opportunities Found)</div>
-            <div class="card-description">Live scraped jobs with 1-click apply, company careers portal links, and ATS match ratings.</div>
+            <div class="card-title">📊 Discovery Stream (<span id="discovery-count">0</span> Opportunities Found)</div>
+            <div class="card-description">Sheets grid view with multi-selection delete, 1-click apply, company careers portals, and ATS scores.</div>
           </div>
-          <button class="btn btn-secondary btn-sm" id="btn-clear-discovery">Clear Feed</button>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <input type="text" class="form-input" id="discovery-table-filter" placeholder="🔍 Live filter table..." style="max-width: 220px; font-size: 0.8rem; padding: 0.35rem 0.65rem;">
+            <button class="btn btn-secondary btn-sm" id="btn-export-discovery-csv" title="Export current view to CSV">📥 Export CSV</button>
+            <button class="btn btn-secondary btn-sm" id="btn-clear-discovery">Clear Feed</button>
+          </div>
         </div>
-        <div id="discovery-feed-container">
+
+        <!-- Sticky Batch Action Toolbar for Discovery -->
+        <div class="sheets-batch-bar" id="discovery-batch-bar">
+          <div class="sheets-batch-info">
+            <span class="sheets-batch-counter">
+              <span>✓</span>
+              <span id="discovery-selected-count">0</span> Selected
+            </span>
+            <span style="font-size: 0.8rem; color: var(--text-secondary);">Batch actions for discovered opportunities:</span>
+          </div>
+          <div class="sheets-batch-controls">
+            <button type="button" class="btn-batch-delete" id="btn-discovery-batch-delete" title="Delete selected jobs from stream & database">
+              🗑️ Delete Selected
+            </button>
+            <button type="button" class="btn btn-success btn-sm" id="btn-discovery-batch-apply" title="Mark selected as applied">
+              🚀 Mark Selected Applied
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-discovery-clear-sel">✕ Deselect All</button>
+          </div>
+        </div>
+
+        <div id="discovery-feed-container" class="sheets-view-container">
           <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
-            <div>🎯 Start a search above using a LinkedIn URL or Google Role & Location to discover jobs!</div>
+            <div>🎯 Start a search above using a LinkedIn URL or Google Role & Location to discover jobs in spreadsheet view!</div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- ==========================================
-         TAB 2: COMPANY SITES EXPLORER
+         TAB 2: COMPANY SITES & LIVE VACANCY SCRAPER
          ========================================== -->
     <div class="tab-pane" id="tab-companies">
       <div class="glass-card">
         <div class="card-header">
           <div>
-            <div class="card-title">🏢 Company Official Career Sites Explorer</div>
-            <div class="card-description">Discover the exact careers portal, ATS platform, and open listings for any company.</div>
+            <div class="card-title">🏢 Company Career Sites & Live Vacancy Scraper</div>
+            <div class="card-description">Scrape actual live job openings, direct apply links, and official portals for any company (Sandisk, Amazon, Swiggy, etc.).</div>
           </div>
         </div>
 
         <form id="form-company-search" style="margin-bottom: 2rem;">
           <div class="form-row">
             <div class="form-group" style="flex: 2;">
-              <label class="form-label" for="company-search-name">Company Name</label>
-              <input type="text" class="form-input" id="company-search-name" placeholder="e.g. Stripe, OpenAI, Spotify, Datadog" required>
+              <label class="form-label" for="company-search-name">Company Name(s) [Multi-Company Supported]</label>
+              <input type="text" class="form-input" id="company-search-name" placeholder="e.g. Sandisk, Amazon, Swiggy, Flipkart, Google, Zepto" required>
             </div>
-            <div class="form-group" style="flex: 2;">
-              <label class="form-label" for="company-search-web">Website / Domain (optional)</label>
-              <input type="text" class="form-input" id="company-search-web" placeholder="e.g. stripe.com">
+            <div class="form-group" style="flex: 1.5;">
+              <label class="form-label" for="company-search-role">Role Keywords (Optional)</label>
+              <input type="text" class="form-input" id="company-search-role" placeholder="e.g. Engineer, Developer, Python, Firmware">
+            </div>
+            <div class="form-group" style="flex: 1.5;">
+              <label class="form-label" for="company-search-loc">Location</label>
+              <input type="text" class="form-input" id="company-search-loc" value="Bengaluru, Karnataka, India" placeholder="e.g. Bengaluru, Karnataka, India">
             </div>
             <div class="form-group" style="flex: 1; align-self: flex-end;">
-              <button type="submit" class="btn btn-primary" style="width: 100%;">
-                <span>🔍 Find Career Site</span>
+              <button type="submit" class="btn btn-primary" id="btn-search-company-portal" style="width: 100%;">
+                <span>⚡ Scrape Live Openings</span>
               </button>
             </div>
           </div>
         </form>
 
+        <!-- Quick Scrape Lookup Chips -->
+        <div style="margin-top: -1.25rem; margin-bottom: 1.5rem;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">⚡ Quick Company Lookups (Click to Scrape Real Openings & Portals):</div>
+          <div class="chips-container" id="quick-companies-container">
+            <span class="filter-chip" onclick="quickScrapeCompany('Sandisk')">🏢 Sandisk / Western Digital</span>
+            <span class="filter-chip" onclick="quickScrapeCompany('Amazon')">🏢 Amazon</span>
+            <span class="filter-chip" onclick="quickScrapeCompany('Google')">🏢 Google</span>
+            <span class="filter-chip" onclick="quickScrapeCompany('Swiggy')">🏢 Swiggy</span>
+            <span class="filter-chip" onclick="quickScrapeCompany('Flipkart')">🏢 Flipkart</span>
+            <span class="filter-chip" onclick="quickScrapeCompany('Zepto')">🏢 Zepto</span>
+            <span class="filter-chip" onclick="quickScrapeCompany('Razorpay')">🏢 Razorpay</span>
+            <span class="filter-chip" onclick="quickScrapeCompany('Qualcomm')">🏢 Qualcomm</span>
+            <span class="filter-chip" onclick="quickScrapeCompany('Nvidia')">🏢 Nvidia</span>
+            <span class="filter-chip" onclick="quickScrapeCompany('Microsoft')">🏢 Microsoft</span>
+          </div>
+        </div>
+
+        <!-- Sticky Batch Action Toolbar for Company Scraped Jobs -->
+        <div class="sheets-batch-bar" id="company-batch-bar">
+          <div class="sheets-batch-info">
+            <span class="sheets-batch-counter">
+              <span>✓</span>
+              <span id="company-selected-count">0</span> Selected
+            </span>
+            <span style="font-size: 0.8rem; color: var(--text-secondary);">Batch actions for scraped company jobs:</span>
+          </div>
+          <div class="sheets-batch-controls">
+            <button type="button" class="btn-batch-delete" id="btn-company-batch-delete" title="Delete selected jobs">
+              🗑️ Delete Selected
+            </button>
+            <button type="button" class="btn btn-success btn-sm" id="btn-company-batch-apply" title="Mark selected as applied">
+              🚀 Mark Selected Applied
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-company-clear-sel">✕ Deselect All</button>
+          </div>
+        </div>
+
         <div id="company-search-result-box" style="display: none; margin-bottom: 2rem;">
-          <!-- Dynamically filled with found portal card -->
+          <!-- Dynamically filled with found portals & live jobs sheets table -->
         </div>
 
         <div class="card-title" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -354,7 +423,7 @@
                 <div class="job-company">Swiggy</div>
                 <div style="font-size: 0.8rem; color: var(--text-muted);">Bengaluru (Koramangala / Bellandur)</div>
               </div>
-              <span class="badge badge-ats">Ashby / Workday</span>
+              <span class="badge badge-ats">Workday Careers</span>
             </div>
             <div class="job-card-actions">
               <a href="https://careers.swiggy.com/" target="_blank" class="btn btn-secondary btn-sm">Careers ↗</a>
@@ -382,7 +451,7 @@
                 <div class="job-company">CRED</div>
                 <div style="font-size: 0.8rem; color: var(--text-muted);">Bengaluru (Indiranagar 100ft Road)</div>
               </div>
-              <span class="badge badge-ats">Ashby Portal</span>
+              <span class="badge badge-ats">Direct Careers Portal</span>
             </div>
             <div class="job-card-actions">
               <a href="https://careers.cred.club/" target="_blank" class="btn btn-secondary btn-sm">Careers ↗</a>
@@ -422,15 +491,271 @@
     </div>
 
     <!-- ==========================================
-         TAB 3: APPLICATION PIPELINE (Kanban)
+         TAB: AUTONOMOUS AGENT (Local Model Powered)
+         ========================================== -->
+    <div class="tab-pane" id="tab-agent">
+      <!-- Agent Header Card -->
+      <div class="glass-card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(6, 182, 212, 0.08) 100%); border-color: rgba(99, 102, 241, 0.35);">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <div style="font-size: 1.35rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 0.65rem;">
+              <span>🤖 JobPulse Autonomous Agent</span>
+              <span class="agent-status-badge status-idle" id="agent-state-badge">🟢 Agent Idle</span>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.35rem; max-width: 720px; line-height: 1.45;">
+              Autonomous end-to-end execution: Give the agent your target companies and roles. The agent autonomously crawls career portals, evaluates JDs with your <b>Local Model</b> (Ollama / LM Studio), auto-tailors ATS LaTeX resumes, discovers HR recruiter leads, and queues them into your spreadsheet pipeline.
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem;">
+            <span class="badge badge-ats" id="agent-llm-badge" style="font-size: 0.775rem;">⚡ LLM Engine: Ollama (llama3.2)</span>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">100% Private • Offline Ready</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent Mission Setup & Local Model Controls (2 Columns) -->
+      <div class="grid-2" style="margin-bottom: 1.5rem; gap: 1.5rem;">
+        <!-- Left: Mission Parameters -->
+        <div class="glass-card">
+          <div class="card-header" style="padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1rem;">
+            <div>
+              <div class="card-title">🎯 Mission Directive & Parameters</div>
+              <div class="card-description">Configure the agent's target scope and auto-pilot actions.</div>
+            </div>
+          </div>
+
+          <!-- Quick Presets -->
+          <div style="margin-bottom: 1rem;">
+            <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.4rem;">⚡ Mission Presets:</div>
+            <div class="chips-container" id="agent-presets-container">
+              <span class="filter-chip active-bengaluru" onclick="applyAgentPreset('full_hunt')">🚀 Full Auto-Pilot Hunt</span>
+              <span class="filter-chip" onclick="applyAgentPreset('target_companies')">🏢 Target Companies Deep Crawl</span>
+              <span class="filter-chip" onclick="applyAgentPreset('tailor_batch')">📄 Batch Tailor Wishlist Jobs</span>
+            </div>
+          </div>
+
+          <form id="form-agent-mission">
+            <div class="form-group">
+              <label class="form-label" for="agent-target-roles">Target Role Title(s) [Multi-Role Supported]</label>
+              <input type="text" class="form-input" id="agent-target-roles" value="Full Stack Developer, Python Developer, Software Engineer" placeholder="e.g. Full Stack Developer, Backend Engineer" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="agent-target-companies">Target Company Names [Multi-Company Supported]</label>
+              <input type="text" class="form-input" id="agent-target-companies" value="Sandisk, Amazon, Swiggy, Zepto, Google, Razorpay" placeholder="e.g. Sandisk, Amazon, Swiggy, Zepto">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="agent-target-loc">Target Location</label>
+                <input type="text" class="form-input" id="agent-target-loc" value="Bengaluru, Karnataka, India" placeholder="e.g. Bengaluru, Karnataka, India">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="agent-min-threshold">Min Match Threshold</label>
+                <select class="form-select" id="agent-min-threshold">
+                  <option value="65">65% (Broad)</option>
+                  <option value="75" selected>75% (Recommended)</option>
+                  <option value="80">80% (High Match)</option>
+                  <option value="85">85% (Strict)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group" style="background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <div style="font-size: 0.8rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">🤖 Autonomous Auto-Pilot Actions:</div>
+              <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label class="checkbox-label" style="font-size: 0.8rem;">
+                  <input type="checkbox" id="agent-chk-tailor" checked>
+                  <span>Auto-tailor ATS LaTeX Resumes for high-scoring jobs (STAR formula)</span>
+                </label>
+                <label class="checkbox-label" style="font-size: 0.8rem;">
+                  <input type="checkbox" id="agent-chk-hr" checked>
+                  <span>Auto-discover HR recruiters & draft personalized referral notes</span>
+                </label>
+                <label class="checkbox-label" style="font-size: 0.8rem;">
+                  <input type="checkbox" id="agent-chk-pipeline" checked>
+                  <span>Auto-save qualified opportunities to Application Pipeline spreadsheet</span>
+                </label>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
+              <button type="submit" class="btn btn-primary" id="btn-launch-agent" style="flex: 2; padding: 0.75rem;">
+                <span>⚡ Launch Autonomous Mission</span>
+              </button>
+              <button type="button" class="btn btn-danger" id="btn-stop-agent" style="display: none; flex: 1; padding: 0.75rem;">
+                <span>🛑 Abort Mission</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Right: Local Model Configuration & Status -->
+        <div class="glass-card">
+          <div class="card-header" style="padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1rem;">
+            <div>
+              <div class="card-title">🖥️ Local Model Engine Configuration</div>
+              <div class="card-description">Connect your local LLM (Ollama / LM Studio) for 100% private, free AI.</div>
+            </div>
+          </div>
+
+          <form id="form-agent-llm-cfg">
+            <div class="form-group">
+              <label class="form-label" for="agent-llm-provider">Model Provider</label>
+              <select class="form-select" id="agent-llm-provider">
+                <option value="ollama" selected>Ollama (Native Local - Default: localhost:11434)</option>
+                <option value="local_openai">LM Studio / Local OpenAI (Default: localhost:1234/v1)</option>
+                <option value="gemini">Google Gemini 1.5 Flash (Cloud Fallback)</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label class="form-label" for="agent-llm-url">Server Base URL</label>
+                <input type="text" class="form-input" id="agent-llm-url" value="http://localhost:11434" placeholder="http://localhost:11434">
+              </div>
+              <div class="form-group" style="flex: 1.5;">
+                <label class="form-label" for="agent-llm-model">Model Name</label>
+                <input type="text" class="form-input" id="agent-llm-model" value="llama3.2" placeholder="e.g. llama3.2, deepseek-r1, mistral">
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-test-local-llm">
+                🔄 Test Connection & Detect Models
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-save-llm-cfg">
+                💾 Save Config
+              </button>
+            </div>
+
+            <!-- Real-time Status Card -->
+            <div id="agent-llm-status-box" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.85rem; font-size: 0.8rem;">
+              <div style="font-weight: 600; color: #fff; margin-bottom: 0.35rem;" id="agent-llm-status-title">
+                🔍 Local Model Status: Checking...
+              </div>
+              <div style="color: var(--text-secondary); line-height: 1.4;" id="agent-llm-status-desc">
+                Click <b>Test Connection</b> above to detect running local models or pull instructions.
+              </div>
+            </div>
+
+            <div style="margin-top: 1rem; font-size: 0.75rem; color: var(--text-muted); line-height: 1.45; background: rgba(99, 102, 241, 0.05); padding: 0.65rem; border-radius: var(--radius-sm); border-left: 3px solid var(--accent-primary);">
+              💡 <b>How to run a local model:</b> Install <a href="https://ollama.com" target="_blank" style="color: var(--accent-cyan);">Ollama</a> and run <code>ollama run llama3.2</code> or <code>ollama run deepseek-r1</code> in your terminal. You can also run <a href="https://lmstudio.ai" target="_blank" style="color: var(--accent-cyan);">LM Studio</a> and start its local server.
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Agent Mission Progress & Live Telemetry Console -->
+      <div class="glass-card" style="margin-bottom: 1.5rem;">
+        <div class="card-header" style="margin-bottom: 0.75rem;">
+          <div>
+            <div class="card-title">📡 Live Mission Progress & Telemetry</div>
+            <div class="card-description">Real-time execution log of agent decisions, crawling, local LLM evaluation, and CV tailoring.</div>
+          </div>
+          <div style="font-size: 0.85rem; font-weight: 700; color: #fff;">
+            Progress: <span id="agent-progress-pct" style="color: var(--accent-cyan);">0%</span>
+          </div>
+        </div>
+
+        <div class="agent-progress-wrapper">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.825rem; font-weight: 600; color: #fff;">
+            <span id="agent-current-step-label">Current Phase: Ready</span>
+            <span id="agent-current-step-text" style="color: var(--accent-cyan); font-weight: 400;">Awaiting launch command...</span>
+          </div>
+          <div class="agent-progress-track">
+            <div class="agent-progress-fill" id="agent-progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="agent-step-phases">
+            <span class="agent-step-pill" id="pill-step-1">1. Init & Local LLM</span>
+            <span class="agent-step-pill" id="pill-step-2">2. Portal Crawl</span>
+            <span class="agent-step-pill" id="pill-step-3">3. Local Model Eval</span>
+            <span class="agent-step-pill" id="pill-step-4">4. LaTeX CV Tailor</span>
+            <span class="agent-step-pill" id="pill-step-5">5. HR & Referral Scout</span>
+            <span class="agent-step-pill" id="pill-step-6">6. Pipeline Sync</span>
+          </div>
+        </div>
+
+        <!-- Hacker Terminal Window -->
+        <div class="agent-terminal-header">
+          <div class="agent-terminal-dots">
+            <div class="agent-terminal-dot dot-red"></div>
+            <div class="agent-terminal-dot dot-yellow"></div>
+            <div class="agent-terminal-dot dot-green"></div>
+          </div>
+          <div>jobpulse-agent@local:~$ mission --active</div>
+          <button type="button" class="btn-icon-sm" id="btn-clear-agent-terminal" title="Clear console" style="font-size: 0.7rem; padding: 0.15rem 0.4rem;">Clear</button>
+        </div>
+        <div class="agent-terminal" id="agent-live-terminal">
+          <div class="terminal-line"><span class="t-time">00:00:00</span><span class="t-level-info">[SYS]</span><span class="t-msg">JobPulse Autonomous Agent Engine initialized. Ready for mission directives.</span></div>
+        </div>
+      </div>
+
+      <!-- Agent Mission Results Section -->
+      <div class="glass-card" id="agent-results-container" style="display: none; margin-bottom: 2rem;">
+        <div class="card-header" style="flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <div class="card-title">🏆 Mission Deliverables & Qualified Pipeline</div>
+            <div class="card-description">Auto-tailored resumes, deep evaluations, and referral pitches ready for application.</div>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary btn-sm" id="btn-export-agent-csv">📥 Export Mission CSV</button>
+            <button class="btn btn-success btn-sm" onclick="switchTab('tab-pipeline')">📋 Open Full Pipeline</button>
+          </div>
+        </div>
+
+        <!-- Metrics Counters Grid -->
+        <div class="grid-4" style="margin-bottom: 1.5rem; gap: 1rem;">
+          <div class="agent-metric-card">
+            <div class="agent-metric-label">Vacancies Crawled</div>
+            <div class="agent-metric-val" id="metric-scraped" style="color: #38bdf8;">0</div>
+          </div>
+          <div class="agent-metric-card">
+            <div class="agent-metric-label">Evaluated with Local LLM</div>
+            <div class="agent-metric-val" id="metric-evaluated" style="color: #a78bfa;">0</div>
+          </div>
+          <div class="agent-metric-card">
+            <div class="agent-metric-label">High-Match Opportunities</div>
+            <div class="agent-metric-val" id="metric-high-matches" style="color: #34d399;">0</div>
+          </div>
+          <div class="agent-metric-card">
+            <div class="agent-metric-label">Resumes Auto-Tailored</div>
+            <div class="agent-metric-val" id="metric-tailored" style="color: #fbbf24;">0</div>
+          </div>
+        </div>
+
+        <!-- Mission Results Spreadsheet Table -->
+        <div style="margin-bottom: 1.5rem;">
+          <div style="font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem;">
+            📊 Top Qualified Opportunities (Spreadsheet View)
+          </div>
+          <div class="sheets-view-container" id="agent-jobs-table-container">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Discovered HR Leads Grid -->
+        <div id="agent-hr-leads-section" style="display: none; margin-bottom: 1.5rem;">
+          <div style="font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem;">
+            👥 Discovered HR Recruiter Leads & Drafted Referral Pitches
+          </div>
+          <div class="grid-2" id="agent-hr-leads-container" style="gap: 1rem;">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         TAB 3: APPLICATION PIPELINE (Sheets & Kanban)
          ========================================== -->
     <div class="tab-pane" id="tab-pipeline">
       <div class="glass-card" style="margin-bottom: 1.5rem;">
         <div class="card-header" style="margin-bottom: 0;">
-          <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
+          <div style="display: flex; align-items: center; gap: 1rem; flex: 1; flex-wrap: wrap;">
             <input type="text" class="form-input" id="pipeline-search-input" 
-                   placeholder="🔍 Search tracked applications by title, company, or skill..." style="max-width: 400px;">
-            <select class="form-select" id="pipeline-filter-status" style="max-width: 180px;">
+                   placeholder="🔍 Search tracked applications by title, company, or skill..." style="max-width: 380px;">
+            <select class="form-select" id="pipeline-filter-status" style="max-width: 160px;">
               <option value="All">All Statuses</option>
               <option value="Wishlist">Wishlist</option>
               <option value="Applied">Applied</option>
@@ -439,15 +764,57 @@
               <option value="Rejected">Rejected</option>
             </select>
           </div>
-          <div style="display: flex; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <div class="view-mode-toggle">
+              <button type="button" class="view-mode-btn active" id="btn-view-sheets" title="Google Sheets style Data Table View">
+                📊 Sheets View
+              </button>
+              <button type="button" class="view-mode-btn" id="btn-view-kanban" title="Kanban Board View">
+                📋 Kanban View
+              </button>
+            </div>
             <button class="btn btn-secondary btn-sm" id="btn-refresh-pipeline">🔄 Refresh</button>
+            <button class="btn btn-secondary btn-sm" id="btn-export-pipeline-csv" title="Export Pipeline to CSV">📥 Export CSV</button>
             <button class="btn btn-success btn-sm" id="btn-pipeline-sync-sheets">📊 Push to Sheets</button>
           </div>
         </div>
       </div>
 
-      <!-- Kanban Columns -->
-      <div class="kanban-board" id="kanban-board">
+      <!-- Sticky Batch Action Toolbar for Pipeline -->
+      <div class="sheets-batch-bar" id="pipeline-batch-bar">
+        <div class="sheets-batch-info">
+          <span class="sheets-batch-counter">
+            <span>✓</span>
+            <span id="pipeline-selected-count">0</span> Selected
+          </span>
+          <span style="font-size: 0.8rem; color: var(--text-secondary);">Manage selected applications in bulk:</span>
+        </div>
+        <div class="sheets-batch-controls">
+          <button type="button" class="btn-batch-delete" id="btn-pipeline-batch-delete" title="Delete selected applications from database">
+            🗑️ Delete Selected
+          </button>
+          <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <span style="font-size: 0.775rem; color: var(--text-muted);">Status:</span>
+            <select class="sheets-status-dropdown" id="pipeline-batch-status-select">
+              <option value="" disabled selected>Change Status...</option>
+              <option value="Wishlist">🌟 Wishlist</option>
+              <option value="Applied">🚀 Applied</option>
+              <option value="Interviewing">💬 Interviewing</option>
+              <option value="Offer">🏆 Offer</option>
+              <option value="Rejected">❌ Rejected</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-pipeline-clear-sel">✕ Deselect All</button>
+        </div>
+      </div>
+
+      <!-- 1. Primary Sheets Grid View -->
+      <div id="pipeline-sheets-view" class="sheets-view-container">
+        <!-- Dynamically rendered dense spreadsheet data table -->
+      </div>
+
+      <!-- 2. Kanban Board (Togglable) -->
+      <div class="kanban-board" id="kanban-board" style="display: none;">
         <!-- 1. Wishlist -->
         <div class="kanban-column" data-status="Wishlist">
           <div class="kanban-column-header">

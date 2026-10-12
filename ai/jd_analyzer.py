@@ -111,8 +111,8 @@ def heuristic_analyze_jd(jd_text):
 
 def analyze_jd(jd_text):
     """
-    Analyzes job description using Gemini AI if configured,
-    or falls back gracefully to local heuristic analyzer.
+    Analyzes job description using the configured Local LLM (Ollama / LM Studio)
+    or Gemini, and falls back gracefully to offline heuristic analyzer.
     """
     if not jd_text or not jd_text.strip():
         return {
@@ -126,11 +126,7 @@ def analyze_jd(jd_text):
             "ai_powered": False
         }
 
-    model = get_gemini_model()
-    if not model:
-        result = heuristic_analyze_jd(jd_text)
-        result["note"] = "Processed using local ATS heuristic engine. Add GEMINI_API_KEY in Settings for AI mode."
-        return result
+    from ai.local_llm import query_llm
 
     prompt = f"""
     You are an expert ATS (Applicant Tracking System) and Senior Technical Recruiter.
@@ -145,24 +141,29 @@ def analyze_jd(jd_text):
       "keywords": ["ATS Keyword 1", "ATS Keyword 2"],
       "responsibilities": ["Key responsibility 1", "Key responsibility 2"],
       "requirements": ["Key requirement 1", "Key requirement 2"],
-      "salary_range": "e.g. $120k - $150k if mentioned, otherwise Not Disclosed",
+      "salary_range": "e.g. Not Disclosed",
       "summary": "Concise 2-sentence executive summary of what this role seeks"
     }}
 
     Job Description:
-    {jd_text}
+    {jd_text[:4000]}
     """
 
-    try:
-        response = model.generate_content(prompt)
-        parsed = clean_json(response.text)
-        if parsed.get("role"):
-            parsed["ai_powered"] = True
-            return parsed
-    except Exception as e:
-        print(f"Gemini API request failed: {e}")
+    system_prompt = "You are an expert ATS parser and resume optimizer. Always return valid raw JSON only."
 
-    # Fallback to heuristic
+    try:
+        llm_res = query_llm(prompt, system_prompt=system_prompt, json_mode=True)
+        if llm_res.get("success") and llm_res.get("text"):
+            parsed = clean_json(llm_res["text"])
+            if parsed and parsed.get("role"):
+                parsed["ai_powered"] = True
+                parsed["model"] = llm_res.get("model", "local-model")
+                parsed["provider"] = llm_res.get("provider", "local")
+                return parsed
+    except Exception as e:
+        print(f"Local LLM analyze error: {e}")
+
+    # Fallback to high-fidelity offline heuristic
     fallback = heuristic_analyze_jd(jd_text)
-    fallback["note"] = "Gemini request unavailable, fallen back to local ATS parser."
+    fallback["note"] = "Processed using built-in ATS heuristics (Local Model offline)."
     return fallback

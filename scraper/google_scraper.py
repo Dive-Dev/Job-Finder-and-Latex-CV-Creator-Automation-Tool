@@ -75,8 +75,8 @@ def build_google_job_query(role, location="", preferences=None):
             parts.append(f'"{kw}"')
             
     if ats_only:
-        # ATS systems prominent in Bengaluru and global tech
-        ats_dork = '(site:boards.greenhouse.io OR site:jobs.lever.co OR site:jobs.ashbyhq.com OR site:myworkdayjobs.com OR site:apply.workable.com OR site:darwinbox.in)'
+        # ATS systems prominent in Bengaluru and global tech (Strictly reliable portals only)
+        ats_dork = '(site:boards.greenhouse.io OR site:jobs.lever.co OR site:myworkdayjobs.com OR site:apply.workable.com OR site:darwinbox.in OR site:smartrecruiters.com)'
         parts.append(ats_dork)
     else:
         parts.append('("careers" OR "jobs" OR "apply" OR "job opening")')
@@ -112,6 +112,10 @@ def parse_search_results(html_content, role="", location=""):
                     
             if not final_url.startswith('http'):
                 continue
+
+            # Completely ignore and exclude broken platforms (Ashby)
+            if 'ashbyhq.com' in final_url.lower():
+                continue
                 
             company, clean_title = extract_company_and_role_from_title(title_text, final_url)
             
@@ -121,12 +125,14 @@ def parse_search_results(html_content, role="", location=""):
                 ats_provider = "Greenhouse"
             elif "lever.co" in final_url:
                 ats_provider = "Lever"
-            elif "ashbyhq.com" in final_url:
-                ats_provider = "Ashby"
             elif "workday" in final_url:
                 ats_provider = "Workday"
             elif "workable.com" in final_url:
                 ats_provider = "Workable"
+            elif "smartrecruiters" in final_url:
+                ats_provider = "SmartRecruiters"
+            elif "darwinbox" in final_url:
+                ats_provider = "Darwinbox"
                 
             results.append({
                 "id": f"g-{uuid.uuid4().hex[:8]}",
@@ -167,12 +173,12 @@ def extract_company_and_role_from_title(title_text, url):
             parts = path.split('/')
             if parts and parts[0]:
                 domain_company = parts[0].replace('-', ' ').title()
-        elif 'ashbyhq.com' in netloc:
+        elif 'myworkdayjobs.com' in netloc:
+            domain_company = netloc.split('.')[0].replace('-', ' ').title()
+        elif 'smartrecruiters.com' in netloc:
             parts = path.split('/')
             if parts and parts[0]:
                 domain_company = parts[0].replace('-', ' ').title()
-        elif 'myworkdayjobs.com' in netloc:
-            domain_company = netloc.split('.')[0].replace('-', ' ').title()
     except Exception:
         pass
 
@@ -180,7 +186,7 @@ def extract_company_and_role_from_title(title_text, url):
     found_company = domain_company
     
     # Strip common site suffixes
-    clean_title = re.sub(r'\s*[-|–]\s*(Greenhouse|Lever|Ashby|Workday|Workable|LinkedIn|Careers).*$', '', clean_title, flags=re.I)
+    clean_title = re.sub(r'\s*[-|–]\s*(Greenhouse|Lever|Workday|Workable|SmartRecruiters|Darwinbox|LinkedIn|Careers).*$', '', clean_title, flags=re.I)
 
     if ' at ' in clean_title:
         parts = clean_title.split(' at ')
@@ -224,7 +230,7 @@ def extract_skills_heuristic(text):
 def search_jobs_google(role, location="", preferences=None, max_results=12):
     """
     Executes a targeted Google/DuckDuckGo search for active job openings,
-    direct ATS postings (Greenhouse, Lever, Ashby, Workday), and company career portals.
+    direct ATS postings (Greenhouse, Lever, Workday, Darwinbox, SmartRecruiters), and company career portals.
     """
     query = build_google_job_query(role, location, preferences)
     
@@ -263,7 +269,7 @@ def search_jobs_google(role, location="", preferences=None, max_results=12):
             "career_page_url": google_url,
             "company_url": "",
             "ats_provider": "Google Jobs",
-            "description": f"Curated search query targeting direct Greenhouse, Lever, and Ashby postings for '{role}' in '{location}'. Click to explore instant applications.",
+            "description": f"Curated search query targeting direct Greenhouse, Lever, and Workday postings for '{role}' in '{location}'. Click to explore instant applications.",
             "status": "Wishlist",
             "skills": extract_skills_heuristic(role + " " + str(preferences))
         }

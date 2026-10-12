@@ -120,10 +120,12 @@ def build_skills_section(skills_dict):
         lines.append(f"     \\textbf{{{cat_name}}}{{: {s_str}}} \\\\")
     return "\n".join(lines)
 
-def generate_latex_cv(profile=None, job_data=None, output_filename=None):
+def generate_latex_cv(profile=None, job_data=None, output_filename=None, filename=None):
     """
     Generates tailored LaTeX CV string and writes .tex file to output folder.
     """
+    if not output_filename and filename:
+        output_filename = filename
     if not profile or not isinstance(profile, dict):
         profile_json_path = os.path.join(LATEX_DIR, 'default_profile.json')
         if os.path.exists(profile_json_path):

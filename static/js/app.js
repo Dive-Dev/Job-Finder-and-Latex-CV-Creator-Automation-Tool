@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initStats();
   initDiscoveryForms();
   initCompanySearch();
+  initAgentTab();
   initPipeline();
   initContactsTab();
   initLatexStudio();
@@ -57,6 +58,7 @@ function initNavTabs() {
       const targetPane = document.getElementById(targetId);
       if (targetPane) targetPane.classList.add('active');
 
+      if (targetId === 'tab-agent') loadAgentInitialState();
       if (targetId === 'tab-pipeline') loadPipeline();
       if (targetId === 'tab-latex') loadProfileAndJobsForCv();
     });
@@ -83,6 +85,36 @@ async function initStats() {
   } catch (err) {
     console.error("Failed to load stats:", err);
   }
+}
+
+// --- Universal CSV Export Helper ---
+function exportJobsToCsv(filename, jobs) {
+  if (!jobs || jobs.length === 0) {
+    showToast("No jobs to export in the current view!", "info");
+    return;
+  }
+  const headers = ["ID", "Company", "Title", "Location", "ATS Provider", "Match Score", "Source", "Status", "Job URL", "Career Portal URL"];
+  const rows = jobs.map(j => [
+    `"${(j.id || '').toString().replace(/"/g, '""')}"`,
+    `"${(j.company || '').toString().replace(/"/g, '""')}"`,
+    `"${(j.title || '').toString().replace(/"/g, '""')}"`,
+    `"${(j.location || '').toString().replace(/"/g, '""')}"`,
+    `"${(j.ats_provider || '').toString().replace(/"/g, '""')}"`,
+    `"${j.match_score ? Math.round(j.match_score) + '%' : ''}"`,
+    `"${(j.source || '').toString().replace(/"/g, '""')}"`,
+    `"${(j.status || 'Wishlist').toString().replace(/"/g, '""')}"`,
+    `"${(j.job_url || '').toString().replace(/"/g, '""')}"`,
+    `"${(j.career_page_url || '').toString().replace(/"/g, '""')}"`
+  ]);
+  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement('a');
+  link.setAttribute('href', encodedUri);
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  showToast(`📥 Exported ${jobs.length} jobs to ${filename}`, "success");
 }
 
 // --- Tab 1: Discovery (LinkedIn & Google) ---
@@ -221,13 +253,38 @@ function initDiscoveryForms() {
   });
 
   clearBtn.addEventListener('click', () => {
+    currentDiscoveryJobs = [];
+    selectedDiscoveryJobIds.clear();
+    const batchBar = document.getElementById('discovery-batch-bar');
+    if (batchBar) batchBar.style.display = 'none';
     document.getElementById('discovery-feed-container').innerHTML = `
       <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
-        <div>🎯 Start a search above using a LinkedIn URL or Google Role & Location to discover jobs!</div>
+        <div>🎯 Start a search above using a LinkedIn URL or Google Role & Location to discover jobs in spreadsheet view!</div>
       </div>
     `;
     document.getElementById('discovery-count').innerText = '0';
   });
+
+  // Discovery Table Live Filter
+  const discFilterInput = document.getElementById('discovery-table-filter');
+  if (discFilterInput) {
+    discFilterInput.addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase().trim();
+      const rows = document.querySelectorAll('#discovery-table-body tr');
+      rows.forEach(r => {
+        const text = r.innerText.toLowerCase();
+        r.style.display = (!term || text.includes(term)) ? '' : 'none';
+      });
+    });
+  }
+
+  // Discovery Table CSV Export
+  const discExportBtn = document.getElementById('btn-export-discovery-csv');
+  if (discExportBtn) {
+    discExportBtn.addEventListener('click', () => {
+      exportJobsToCsv('JobPulse_Discovery_Jobs.csv', currentDiscoveryJobs);
+    });
+  }
 
   initBengaluruChips();
 }
@@ -376,68 +433,254 @@ function initBengaluruChips() {
 }
 
 
+// State for Discovery multi-selection
+let selectedDiscoveryJobIds = new Set();
+let currentDiscoveryJobs = [];
+
 function renderDiscoveryCards(jobs) {
   const container = document.getElementById('discovery-feed-container');
-  document.getElementById('discovery-count').innerText = jobs.length;
+  const countElem = document.getElementById('discovery-count');
+  const batchBar = document.getElementById('discovery-batch-bar');
+  const selectedCountElem = document.getElementById('discovery-selected-count');
 
-  if (!jobs || jobs.length === 0) {
-    container.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No job postings found matching this query. Try broader keywords.</div>`;
+  currentDiscoveryJobs = jobs || [];
+  selectedDiscoveryJobIds.clear();
+  if (batchBar) batchBar.style.display = 'none';
+  if (selectedCountElem) selectedCountElem.innerText = '0';
+  if (countElem) countElem.innerText = currentDiscoveryJobs.length;
+
+  if (!currentDiscoveryJobs || currentDiscoveryJobs.length === 0) {
+    container.innerHTML = `<div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">No job postings found matching this query. Try broader keywords or select Bengaluru tech hubs.</div>`;
     return;
   }
 
-  container.innerHTML = jobs.map(job => {
-    const skillsHtml = (job.skills || []).map(s => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('');
-    const matchScore = job.match_score ? `${Math.round(job.match_score)}% Match` : 'ATS Ready';
-    
-    return `
-      <div class="job-card" id="card-${job.id}">
-        <div class="job-card-top">
-          <div>
-            <a href="${escapeHtml(job.job_url || '#')}" target="_blank" class="job-title-link">
-              ${escapeHtml(job.title)}
-            </a>
-            <div class="job-meta-row">
-              <span class="job-company">${escapeHtml(job.company)}</span>
-              <span>•</span>
-              <span>📍 ${escapeHtml(job.location || 'Remote/Unspecified')}</span>
-              ${job.posted_date ? `<span>• 🕒 ${escapeHtml(job.posted_date)}</span>` : ''}
-              <span class="badge badge-source">${escapeHtml(job.source || 'Scraper')}</span>
-              ${job.ats_provider ? `<span class="badge badge-ats">⚡ ${escapeHtml(job.ats_provider)}</span>` : ''}
-            </div>
-          </div>
-          <span class="badge badge-match">${matchScore}</span>
-        </div>
+  // Render dense Sheets-based Data Table
+  container.innerHTML = `
+    <table class="sheets-table">
+      <thead>
+        <tr>
+          <th class="sheets-checkbox-cell">
+            <input type="checkbox" id="discovery-select-all" class="sheets-custom-checkbox" title="Select All">
+          </th>
+          <th style="min-width: 140px;">Company</th>
+          <th style="min-width: 220px;">Role / Job Title</th>
+          <th style="min-width: 130px;">Location</th>
+          <th style="min-width: 120px;">Source / ATS</th>
+          <th style="min-width: 90px;">ATS Match</th>
+          <th style="min-width: 110px;">Career Portal</th>
+          <th style="min-width: 210px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="discovery-table-body">
+        ${currentDiscoveryJobs.map(job => {
+          const matchScore = job.match_score ? `${Math.round(job.match_score)}%` : 'ATS Ready';
+          const matchClass = job.match_score >= 80 ? 'badge-match' : (job.match_score >= 60 ? 'badge-ats' : 'badge-source');
+          return `
+            <tr id="discovery-row-${job.id}" data-job-id="${job.id}">
+              <td class="sheets-checkbox-cell">
+                <input type="checkbox" class="sheets-custom-checkbox discovery-row-chk" data-job-id="${job.id}">
+              </td>
+              <td>
+                <div class="sheets-company-cell">
+                  <span>🏢</span>
+                  <span>${escapeHtml(job.company)}</span>
+                </div>
+              </td>
+              <td>
+                <a href="${escapeHtml(job.job_url || '#')}" target="_blank" class="sheets-title-link" title="${escapeHtml(job.title)}">
+                  ${escapeHtml(job.title)}
+                </a>
+              </td>
+              <td>
+                <div class="sheets-location-cell" title="${escapeHtml(job.location || 'Bengaluru')}">
+                  📍 ${escapeHtml(job.location || 'Bengaluru')}
+                </div>
+              </td>
+              <td>
+                <span class="badge badge-source" style="font-size: 0.72rem;">${escapeHtml(job.ats_provider || job.source || 'Direct')}</span>
+              </td>
+              <td>
+                <span class="badge ${matchClass}" style="font-size: 0.72rem;">${matchScore}</span>
+              </td>
+              <td>
+                ${job.career_page_url ? `
+                  <a href="${escapeHtml(job.career_page_url)}" target="_blank" class="btn-icon-sm" style="color: var(--accent-cyan);" title="Official company careers portal">
+                    🏢 Portal ↗
+                  </a>` : '<span style="color: var(--text-muted); font-size: 0.75rem;">—</span>'}
+              </td>
+              <td>
+                <div class="sheets-actions-cell">
+                  <button class="btn btn-primary btn-sm" style="padding: 0.25rem 0.55rem; font-size: 0.75rem;" onclick="applyJob('${job.id}', '${encodeURIComponent(job.career_page_url || job.job_url)}')">
+                    ⚡ Apply
+                  </button>
+                  <button class="btn-icon-sm" onclick="tailorForJob('${job.id}')" title="Tailor LaTeX CV">
+                    📄 CV
+                  </button>
+                  <button class="btn-icon-sm" onclick="inspectJobAi('${job.id}')" title="Inspect JD with AI">
+                    🤖 JD
+                  </button>
+                  <button class="btn-icon-sm" onclick="findCompanyContacts('${escapeHtml(job.company)}')" title="Find HR contacts">
+                    👥 HR
+                  </button>
+                  <button class="btn-icon-sm btn-danger" onclick="deleteDiscoveryJob('${job.id}')" title="Delete job">
+                    🗑️
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
 
-        ${job.description ? `<div style="font-size: 0.85rem; color: var(--text-secondary); max-height: 60px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(job.description.slice(0, 200))}...</div>` : ''}
+  // Attach Selection Listeners
+  initDiscoverySelectionEvents();
+}
 
-        <div class="skills-pill-container">${skillsHtml}</div>
+function initDiscoverySelectionEvents() {
+  const selectAll = document.getElementById('discovery-select-all');
+  const rowCheckboxes = document.querySelectorAll('.discovery-row-chk');
+  const batchBar = document.getElementById('discovery-batch-bar');
+  const countElem = document.getElementById('discovery-selected-count');
 
-        <div class="job-card-actions">
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            ${job.career_page_url ? `
-              <a href="${escapeHtml(job.career_page_url)}" target="_blank" class="btn btn-secondary btn-sm" title="Open official company careers portal">
-                🏢 Career Portal ↗
-              </a>` : ''}
-            <button class="btn btn-secondary btn-sm" onclick="tailorForJob('${job.id}')" title="Tailor LaTeX CV for this job">
-              📄 Tailor CV
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="inspectJobAi('${job.id}')" title="Analyze JD with AI">
-              🤖 Inspect JD
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="findCompanyContacts('${escapeHtml(job.company)}')" title="Find HR, recruiters & referral contacts">
-              👥 Find HR
-            </button>
-          </div>
+  function updateBatchBar() {
+    const count = selectedDiscoveryJobIds.size;
+    if (countElem) countElem.innerText = count;
+    if (batchBar) batchBar.style.display = count > 0 ? 'flex' : 'none';
+    if (selectAll) {
+      selectAll.checked = count > 0 && count === rowCheckboxes.length;
+      selectAll.indeterminate = count > 0 && count < rowCheckboxes.length;
+    }
+  }
 
-          <div class="action-buttons-group">
-            <button class="btn btn-primary btn-sm" onclick="applyJob('${job.id}', '${encodeURIComponent(job.career_page_url || job.job_url)}')">
-              ⚡ 1-Click Apply
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
+  if (selectAll) {
+    selectAll.addEventListener('change', () => {
+      const isChecked = selectAll.checked;
+      rowCheckboxes.forEach(chk => {
+        chk.checked = isChecked;
+        const jid = chk.dataset.jobId;
+        const row = document.getElementById(`discovery-row-${jid}`);
+        if (isChecked) {
+          selectedDiscoveryJobIds.add(jid);
+          if (row) row.classList.add('row-selected');
+        } else {
+          selectedDiscoveryJobIds.delete(jid);
+          if (row) row.classList.remove('row-selected');
+        }
+      });
+      updateBatchBar();
+    });
+  }
+
+  rowCheckboxes.forEach(chk => {
+    chk.addEventListener('change', () => {
+      const jid = chk.dataset.jobId;
+      const row = document.getElementById(`discovery-row-${jid}`);
+      if (chk.checked) {
+        selectedDiscoveryJobIds.add(jid);
+        if (row) row.classList.add('row-selected');
+      } else {
+        selectedDiscoveryJobIds.delete(jid);
+        if (row) row.classList.remove('row-selected');
+      }
+      updateBatchBar();
+    });
+  });
+
+  // Batch Delete button
+  const batchDeleteBtn = document.getElementById('btn-discovery-batch-delete');
+  if (batchDeleteBtn) {
+    batchDeleteBtn.onclick = async () => {
+      const ids = Array.from(selectedDiscoveryJobIds);
+      if (ids.length === 0) return;
+      if (!confirm(`Are you sure you want to delete ${ids.length} selected job(s)?`)) return;
+
+      try {
+        const res = await fetch('/api/jobs/batch-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_ids: ids })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Deleted ${data.deleted_count || ids.length} jobs successfully!`, "info");
+          ids.forEach(id => {
+            const row = document.getElementById(`discovery-row-${id}`);
+            if (row) row.remove();
+          });
+          currentDiscoveryJobs = currentDiscoveryJobs.filter(j => !selectedDiscoveryJobIds.has(j.id));
+          document.getElementById('discovery-count').innerText = currentDiscoveryJobs.length;
+          selectedDiscoveryJobIds.clear();
+          updateBatchBar();
+          initStats();
+        } else {
+          showToast(data.error || "Batch delete failed", "error");
+        }
+      } catch (err) {
+        showToast("Error executing batch delete", "error");
+      }
+    };
+  }
+
+  // Batch Apply button
+  const batchApplyBtn = document.getElementById('btn-discovery-batch-apply');
+  if (batchApplyBtn) {
+    batchApplyBtn.onclick = async () => {
+      const ids = Array.from(selectedDiscoveryJobIds);
+      if (ids.length === 0) return;
+
+      try {
+        const res = await fetch('/api/jobs/batch-status', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_ids: ids, status: 'Applied' })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Marked ${ids.length} jobs as Applied!`, "success");
+          selectedDiscoveryJobIds.clear();
+          updateBatchBar();
+          initStats();
+        }
+      } catch (err) {
+        showToast("Error updating status", "error");
+      }
+    };
+  }
+
+  // Clear Selection button
+  const clearSelBtn = document.getElementById('btn-discovery-clear-sel');
+  if (clearSelBtn) {
+    clearSelBtn.onclick = () => {
+      selectedDiscoveryJobIds.clear();
+      rowCheckboxes.forEach(chk => {
+        chk.checked = false;
+        const row = document.getElementById(`discovery-row-${chk.dataset.jobId}`);
+        if (row) row.classList.remove('row-selected');
+      });
+      updateBatchBar();
+    };
+  }
+}
+
+async function deleteDiscoveryJob(jobId) {
+  if (!confirm("Are you sure you want to delete this job?")) return;
+  try {
+    const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      showToast("Job deleted", "info");
+      const row = document.getElementById(`discovery-row-${jobId}`);
+      if (row) row.remove();
+      selectedDiscoveryJobIds.delete(jobId);
+      currentDiscoveryJobs = currentDiscoveryJobs.filter(j => j.id !== jobId);
+      document.getElementById('discovery-count').innerText = currentDiscoveryJobs.length;
+      initStats();
+    }
+  } catch (err) {
+    showToast("Failed to delete job", "error");
+  }
 }
 
 // 1-Click Apply Handler
@@ -457,9 +700,9 @@ async function applyJob(jobId, encodedUrl) {
     if (data.success) {
       showToast("Opened application page & updated status to 'Applied'!", "success");
       initStats();
-      const card = document.getElementById(`card-${jobId}`);
-      if (card) {
-        const applyBtn = card.querySelector('.btn-primary');
+      const row = document.getElementById(`discovery-row-${jobId}`) || document.getElementById(`pipeline-row-${jobId}`);
+      if (row) {
+        const applyBtn = row.querySelector('.btn-primary');
         if (applyBtn) {
           applyBtn.className = "btn btn-success btn-sm";
           applyBtn.innerText = "✓ Applied";
@@ -471,67 +714,1193 @@ async function applyJob(jobId, encodedUrl) {
   }
 }
 
-// --- Tab 2: Company Career Sites ---
-function initCompanySearch() {
-  const form = document.getElementById('form-company-search');
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const company = document.getElementById('company-search-name').value.trim();
-    const website = document.getElementById('company-search-web').value.trim();
-
-    try {
-      showToast(`Searching careers portal for ${company}...`, "info");
-      const res = await fetch('/api/scrape/company', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ company, website })
-      });
-      const data = await res.json();
-      if (data.success && data.company_info) {
-        renderCompanyResult(data.company_info);
+// Quick Scrape from Chips
+function quickScrapeCompany(name) {
+  const input = document.getElementById('company-search-name');
+  if (input) {
+    input.value = name;
+    const form = document.getElementById('form-company-search');
+    if (form) {
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        form.dispatchEvent(new Event('submit', { cancelable: true }));
       }
-    } catch (err) {
-      showToast("Failed to find company career portal", "error");
     }
-  });
+  }
 }
 
-function renderCompanyResult(info) {
+// --- Tab 2: Company Career Sites & Live Vacancy Scraper ---
+let currentCompanyJobs = [];
+let selectedCompanyJobIds = new Set();
+
+function initCompanySearch() {
+  const form = document.getElementById('form-company-search');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const companyInput = document.getElementById('company-search-name');
+      const roleInput = document.getElementById('company-search-role');
+      const locInput = document.getElementById('company-search-loc');
+
+      const company = companyInput ? companyInput.value.trim() : '';
+      const role = roleInput ? roleInput.value.trim() : '';
+      const location = locInput ? locInput.value.trim() : 'Bengaluru, Karnataka, India';
+
+      if (!company) {
+        showToast("Please enter a company name (e.g. Sandisk, Amazon, Swiggy)", "error");
+        return;
+      }
+
+      const btn = document.getElementById('btn-search-company-portal');
+      const originalText = btn ? btn.innerHTML : 'Scrape';
+      if (btn) {
+        btn.innerHTML = `<span class="spinner"></span> <span>Crawling Vacancies & Portals...</span>`;
+        btn.disabled = true;
+      }
+
+      try {
+        showToast(`⚡ Crawling live vacancies & verified career portals for: ${company}...`, "info");
+        const res = await fetch('/api/scrape/company', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company,
+            role,
+            location,
+            max_results: 15,
+            auto_save: true
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentCompanyJobs = data.jobs || [];
+          const companiesList = data.companies || (data.company_info ? [data.company_info] : []);
+          renderCompanyScrapedJobs(currentCompanyJobs, companiesList);
+          initStats();
+          showToast(`Scraped ${currentCompanyJobs.length} live vacancies across verified career ecosystems!`, "success");
+        } else {
+          showToast(data.error || "Failed to find company career portal", "error");
+        }
+      } catch (err) {
+        console.error("Company scrape error:", err);
+        showToast("Network error crawling company portals", "error");
+      } finally {
+        if (btn) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }
+      }
+    });
+  }
+
+  initCompanyBatchControls();
+}
+
+function renderCompanyScrapedJobs(jobs, companiesList) {
   const box = document.getElementById('company-search-result-box');
+  const batchBar = document.getElementById('company-batch-bar');
+  const countElem = document.getElementById('company-selected-count');
+
   box.style.display = 'block';
-  box.innerHTML = `
-    <div class="job-card" style="border-color: var(--accent-primary);">
-      <div class="job-card-top">
-        <div>
-          <div class="job-company" style="font-size: 1.2rem;">🏢 ${escapeHtml(info.company)}</div>
-          <div class="job-meta-row">
-            ${info.official_site ? `<span>🌐 <a href="${escapeHtml(info.official_site)}" target="_blank" style="color: var(--accent-cyan);">${escapeHtml(info.official_site)}</a></span>` : ''}
-            <span>•</span>
-            <span class="badge badge-ats">ATS: ${escapeHtml(info.ats_provider)}</span>
-          </div>
+  selectedCompanyJobIds.clear();
+  if (batchBar) batchBar.style.display = 'none';
+  if (countElem) countElem.innerText = '0';
+
+  let portalsHtml = '';
+  if (companiesList && companiesList.length > 0) {
+    portalsHtml = `
+      <div style="margin-bottom: 1.5rem;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🏢 Verified Career Portals & Intelligence (${companiesList.length})</span>
+          <span class="badge badge-ats">Live Portals</span>
+        </div>
+        <div class="grid-3" style="gap: 1rem;">
+          ${companiesList.map(info => {
+            const crawled = info.crawled_data || {};
+            return `
+              <div class="job-card" style="margin-bottom: 0;">
+                <div class="job-card-top" style="margin-bottom: 0.5rem;">
+                  <div>
+                    <div class="job-company" style="font-size: 1.05rem;">🏢 ${escapeHtml(info.company)}</div>
+                    ${info.official_site ? `
+                      <a href="${escapeHtml(info.official_site)}" target="_blank" style="font-size: 0.775rem; color: var(--accent-cyan); text-decoration: none;">
+                        🌐 ${escapeHtml(info.official_site.replace(/^https?:\/\//, ''))}
+                      </a>` : ''}
+                  </div>
+                  <span class="badge badge-ats">⚡ ${escapeHtml(info.ats_provider || 'Direct Portal')}</span>
+                </div>
+                ${crawled.page_title ? `
+                  <div style="font-size: 0.8rem; color: var(--text-primary); font-weight: 500; margin-bottom: 0.35rem; line-height: 1.3;">
+                    ${escapeHtml(crawled.page_title)}
+                  </div>` : ''}
+                ${crawled.meta_description ? `
+                  <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.35; margin-bottom: 0.75rem; max-height: 2.7em; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHtml(crawled.meta_description)}
+                  </div>` : ''}
+                <div class="job-card-actions" style="margin-top: 0.5rem;">
+                  <a href="${escapeHtml(info.career_page_url)}" target="_blank" class="btn btn-primary btn-sm" style="font-size: 0.775rem;">
+                    🚀 Careers Portal ↗
+                  </a>
+                  <button class="btn btn-secondary btn-sm" onclick="findCompanyContacts('${escapeHtml(info.company)}')" title="Find HR & Referrals">
+                    👥 HR
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('')}
         </div>
       </div>
-      <div style="font-size: 0.9rem; color: var(--text-secondary); margin: 0.5rem 0;">
-        Found official career portal link. You can browse live openings directly on their hiring system.
+    `;
+  }
+
+  // Live Vacancies Spreadsheet Grid
+  let tableHtml = '';
+  if (!jobs || jobs.length === 0) {
+    tableHtml = `
+      <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+        <div>ℹ️ No specific live vacancy rows found for this search. You can click <b>Careers Portal ↗</b> above to search their portal directly!</div>
       </div>
-      <div class="job-card-actions">
-        <a href="${escapeHtml(info.career_page_url)}" target="_blank" class="btn btn-primary">
-          🚀 Open Official Careers Page ↗
-        </a>
+    `;
+  } else {
+    tableHtml = `
+      <div class="sheets-view-container">
+        <table class="sheets-table">
+          <thead>
+            <tr>
+              <th class="sheets-checkbox-cell">
+                <input type="checkbox" id="company-select-all" class="sheets-custom-checkbox" title="Select All">
+              </th>
+              <th style="min-width: 140px;">Company</th>
+              <th style="min-width: 220px;">Role / Live Vacancy</th>
+              <th style="min-width: 130px;">Location</th>
+              <th style="min-width: 120px;">Source / ATS</th>
+              <th style="min-width: 90px;">ATS Match</th>
+              <th style="min-width: 110px;">Career Portal</th>
+              <th style="min-width: 210px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="company-table-body">
+            ${jobs.map(job => {
+              const matchScore = job.match_score ? `${Math.round(job.match_score)}%` : 'ATS Ready';
+              const matchClass = job.match_score >= 80 ? 'badge-match' : (job.match_score >= 60 ? 'badge-ats' : 'badge-source');
+              return `
+                <tr id="company-row-${job.id}" data-job-id="${job.id}">
+                  <td class="sheets-checkbox-cell">
+                    <input type="checkbox" class="sheets-custom-checkbox company-row-chk" data-job-id="${job.id}">
+                  </td>
+                  <td>
+                    <div class="sheets-company-cell">
+                      <span>🏢</span>
+                      <span>${escapeHtml(job.company)}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <a href="${escapeHtml(job.job_url || '#')}" target="_blank" class="sheets-title-link" title="${escapeHtml(job.title)}">
+                      ${escapeHtml(job.title)}
+                    </a>
+                  </td>
+                  <td>
+                    <div class="sheets-location-cell" title="${escapeHtml(job.location || 'Bengaluru')}">
+                      📍 ${escapeHtml(job.location || 'Bengaluru')}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge badge-source" style="font-size: 0.72rem;">${escapeHtml(job.ats_provider || job.source || 'Careers')}</span>
+                  </td>
+                  <td>
+                    <span class="badge ${matchClass}" style="font-size: 0.72rem;">${matchScore}</span>
+                  </td>
+                  <td>
+                    ${job.career_page_url ? `
+                      <a href="${escapeHtml(job.career_page_url)}" target="_blank" class="btn-icon-sm" style="color: var(--accent-cyan);" title="Official company careers portal">
+                        🏢 Portal ↗
+                      </a>` : '<span style="color: var(--text-muted); font-size: 0.75rem;">—</span>'}
+                  </td>
+                  <td>
+                    <div class="sheets-actions-cell">
+                      <button class="btn btn-primary btn-sm" style="padding: 0.25rem 0.55rem; font-size: 0.75rem;" onclick="applyJob('${job.id}', '${encodeURIComponent(job.career_page_url || job.job_url)}')">
+                        ⚡ Apply
+                      </button>
+                      <button class="btn-icon-sm" onclick="tailorForJob('${job.id}')" title="Tailor LaTeX CV">
+                        📄 CV
+                      </button>
+                      <button class="btn-icon-sm" onclick="inspectJobAi('${job.id}')" title="Inspect JD with AI">
+                        🤖 JD
+                      </button>
+                      <button class="btn-icon-sm" onclick="findCompanyContacts('${escapeHtml(job.company)}')" title="Find HR contacts">
+                        👥 HR
+                      </button>
+                      <button class="btn-icon-sm btn-danger" onclick="deleteCompanyJob('${job.id}')" title="Delete job">
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  box.innerHTML = `
+    ${portalsHtml}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.75rem;">
+      <div>
+        <div style="font-size: 1.1rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 0.5rem;">
+          <span>📋 Scraped Live Vacancies (<span id="company-jobs-count">${jobs.length}</span> Active Openings)</span>
+          <span class="badge badge-match">Direct Links</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">
+          Sheets grid view with multi-select delete, 1-click application, and ATS profiling.
+        </div>
+      </div>
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <input type="text" class="form-input" id="company-table-filter" placeholder="🔍 Live filter company jobs..." style="max-width: 220px; font-size: 0.8rem; padding: 0.35rem 0.65rem;">
+        <button class="btn btn-secondary btn-sm" id="btn-export-company-csv" title="Export company openings to CSV">📥 Export CSV</button>
       </div>
     </div>
+    ${tableHtml}
+  `;
+
+  // Attach table events
+  attachCompanyTableEvents();
+}
+
+function attachCompanyTableEvents() {
+  const selectAll = document.getElementById('company-select-all');
+  const rowCheckboxes = document.querySelectorAll('.company-row-chk');
+  const batchBar = document.getElementById('company-batch-bar');
+  const countElem = document.getElementById('company-selected-count');
+
+  function updateBatchBar() {
+    const count = selectedCompanyJobIds.size;
+    if (countElem) countElem.innerText = count;
+    if (batchBar) batchBar.style.display = count > 0 ? 'flex' : 'none';
+    if (selectAll) {
+      selectAll.checked = count > 0 && count === rowCheckboxes.length;
+      selectAll.indeterminate = count > 0 && count < rowCheckboxes.length;
+    }
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener('change', () => {
+      const isChecked = selectAll.checked;
+      rowCheckboxes.forEach(chk => {
+        chk.checked = isChecked;
+        const jid = chk.dataset.jobId;
+        const row = document.getElementById(`company-row-${jid}`);
+        if (isChecked) {
+          selectedCompanyJobIds.add(jid);
+          if (row) row.classList.add('row-selected');
+        } else {
+          selectedCompanyJobIds.delete(jid);
+          if (row) row.classList.remove('row-selected');
+        }
+      });
+      updateBatchBar();
+    });
+  }
+
+  rowCheckboxes.forEach(chk => {
+    chk.addEventListener('change', () => {
+      const jid = chk.dataset.jobId;
+      const row = document.getElementById(`company-row-${jid}`);
+      if (chk.checked) {
+        selectedCompanyJobIds.add(jid);
+        if (row) row.classList.add('row-selected');
+      } else {
+        selectedCompanyJobIds.delete(jid);
+        if (row) row.classList.remove('row-selected');
+      }
+      updateBatchBar();
+    });
+  });
+
+  // Live filter for company table
+  const companyFilterInput = document.getElementById('company-table-filter');
+  if (companyFilterInput) {
+    companyFilterInput.addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase().trim();
+      const rows = document.querySelectorAll('#company-table-body tr');
+      rows.forEach(r => {
+        const text = r.innerText.toLowerCase();
+        r.style.display = (!term || text.includes(term)) ? '' : 'none';
+      });
+    });
+  }
+
+  // Export CSV for company table
+  const companyExportBtn = document.getElementById('btn-export-company-csv');
+  if (companyExportBtn) {
+    companyExportBtn.addEventListener('click', () => {
+      exportJobsToCsv('JobPulse_Company_Openings.csv', currentCompanyJobs);
+    });
+  }
+}
+
+function initCompanyBatchControls() {
+  const batchBar = document.getElementById('company-batch-bar');
+  const countElem = document.getElementById('company-selected-count');
+  const selectAll = document.getElementById('company-select-all');
+
+  function updateBatchBar() {
+    const count = selectedCompanyJobIds.size;
+    if (countElem) countElem.innerText = count;
+    if (batchBar) batchBar.style.display = count > 0 ? 'flex' : 'none';
+    if (selectAll) {
+      const rowCheckboxes = document.querySelectorAll('.company-row-chk');
+      selectAll.checked = count > 0 && count === rowCheckboxes.length;
+      selectAll.indeterminate = count > 0 && count < rowCheckboxes.length;
+    }
+  }
+
+  // Batch Delete button
+  const batchDeleteBtn = document.getElementById('btn-company-batch-delete');
+  if (batchDeleteBtn) {
+    batchDeleteBtn.onclick = async () => {
+      const ids = Array.from(selectedCompanyJobIds);
+      if (ids.length === 0) return;
+      if (!confirm(`Are you sure you want to delete ${ids.length} selected job(s)?`)) return;
+
+      try {
+        const res = await fetch('/api/jobs/batch-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_ids: ids })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Deleted ${data.deleted_count || ids.length} jobs successfully!`, "info");
+          ids.forEach(id => {
+            const row = document.getElementById(`company-row-${id}`);
+            if (row) row.remove();
+          });
+          currentCompanyJobs = currentCompanyJobs.filter(j => !selectedCompanyJobIds.has(j.id));
+          const countBadge = document.getElementById('company-jobs-count');
+          if (countBadge) countBadge.innerText = currentCompanyJobs.length;
+          selectedCompanyJobIds.clear();
+          updateBatchBar();
+          initStats();
+        } else {
+          showToast(data.error || "Batch delete failed", "error");
+        }
+      } catch (err) {
+        showToast("Error executing batch delete", "error");
+      }
+    };
+  }
+
+  // Batch Apply button
+  const batchApplyBtn = document.getElementById('btn-company-batch-apply');
+  if (batchApplyBtn) {
+    batchApplyBtn.onclick = async () => {
+      const ids = Array.from(selectedCompanyJobIds);
+      if (ids.length === 0) return;
+
+      try {
+        const res = await fetch('/api/jobs/batch-status', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_ids: ids, status: 'Applied' })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Marked ${ids.length} jobs as Applied!`, "success");
+          selectedCompanyJobIds.clear();
+          updateBatchBar();
+          initStats();
+        }
+      } catch (err) {
+        showToast("Error updating status", "error");
+      }
+    };
+  }
+
+  // Clear Selection button
+  const clearSelBtn = document.getElementById('btn-company-clear-sel');
+  if (clearSelBtn) {
+    clearSelBtn.onclick = () => {
+      selectedCompanyJobIds.clear();
+      document.querySelectorAll('.company-row-chk').forEach(c => c.checked = false);
+      document.querySelectorAll('#company-table-body tr').forEach(r => r.classList.remove('row-selected'));
+      updateBatchBar();
+    };
+  }
+}
+
+async function deleteCompanyJob(jobId) {
+  if (!confirm("Are you sure you want to delete this job?")) return;
+  try {
+    const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      showToast("Job deleted", "info");
+      const row = document.getElementById(`company-row-${jobId}`);
+      if (row) row.remove();
+      selectedCompanyJobIds.delete(jobId);
+      currentCompanyJobs = currentCompanyJobs.filter(j => j.id !== jobId);
+      const countBadge = document.getElementById('company-jobs-count');
+      if (countBadge) countBadge.innerText = currentCompanyJobs.length;
+      const batchBar = document.getElementById('company-batch-bar');
+      const countElem = document.getElementById('company-selected-count');
+      if (countElem) countElem.innerText = selectedCompanyJobIds.size;
+      if (batchBar) batchBar.style.display = selectedCompanyJobIds.size > 0 ? 'flex' : 'none';
+      initStats();
+    }
+  } catch (err) {
+    showToast("Failed to delete job", "error");
+  }
+}
+
+// ===================================================================
+// Tab: Autonomous Agent & Local Model Controller
+// ===================================================================
+
+let agentPollingInterval = null;
+let lastAgentLogCount = 0;
+let lastAgentDeliverables = [];
+let lastAgentHrLeads = [];
+
+function initAgentTab() {
+  // Mission Form Submit
+  const missionForm = document.getElementById('form-agent-mission');
+  if (missionForm) {
+    missionForm.addEventListener('submit', launchAgentMission);
+  }
+
+  // Stop / Abort Mission Button
+  const stopBtn = document.getElementById('btn-stop-agent');
+  if (stopBtn) {
+    stopBtn.addEventListener('click', stopAgentMission);
+  }
+
+  // Local Model: Test Connection
+  const testLlmBtn = document.getElementById('btn-test-local-llm');
+  if (testLlmBtn) {
+    testLlmBtn.addEventListener('click', testLocalModelConnection);
+  }
+
+  // Local Model: Save Config
+  const saveLlmBtn = document.getElementById('btn-save-llm-cfg');
+  if (saveLlmBtn) {
+    saveLlmBtn.addEventListener('click', saveAgentLlmConfig);
+  }
+
+  // Provider change helper
+  const providerSelect = document.getElementById('agent-llm-provider');
+  if (providerSelect) {
+    providerSelect.addEventListener('change', () => {
+      const p = providerSelect.value;
+      const urlInput = document.getElementById('agent-llm-url');
+      const modelInput = document.getElementById('agent-llm-model');
+      if (p === 'ollama') {
+        if (!urlInput.value || urlInput.value.includes('1234')) urlInput.value = 'http://localhost:11434';
+        if (!modelInput.value || modelInput.value === 'local-model') modelInput.value = 'llama3.2';
+      } else if (p === 'local_openai') {
+        if (!urlInput.value || urlInput.value.includes('11434')) urlInput.value = 'http://localhost:1234/v1';
+        if (!modelInput.value) modelInput.value = 'local-model';
+      }
+    });
+  }
+
+  // Clear Terminal Button
+  const clearTerminalBtn = document.getElementById('btn-clear-agent-terminal');
+  if (clearTerminalBtn) {
+    clearTerminalBtn.addEventListener('click', () => {
+      const term = document.getElementById('agent-live-terminal');
+      if (term) term.innerHTML = `<div class="terminal-line"><span class="t-time">00:00:00</span><span class="t-level-info">[SYS]</span><span class="t-msg">Console cleared.</span></div>`;
+      lastAgentLogCount = 0;
+    });
+  }
+
+  // Export Deliverables CSV Button
+  const exportCsvBtn = document.getElementById('btn-export-agent-csv');
+  if (exportCsvBtn) {
+    exportCsvBtn.addEventListener('click', () => {
+      exportJobsToCsv("Agent_Mission_Deliverables.csv", lastAgentDeliverables);
+    });
+  }
+}
+
+window.applyAgentPreset = function(presetType) {
+  const container = document.getElementById('agent-presets-container');
+  if (container) {
+    container.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active-bengaluru'));
+  }
+  const chips = container ? container.querySelectorAll('.filter-chip') : [];
+
+  const rolesInput = document.getElementById('agent-target-roles');
+  const companiesInput = document.getElementById('agent-target-companies');
+  const locInput = document.getElementById('agent-target-loc');
+  const threshSelect = document.getElementById('agent-min-threshold');
+  const chkTailor = document.getElementById('agent-chk-tailor');
+  const chkHr = document.getElementById('agent-chk-hr');
+  const chkPipeline = document.getElementById('agent-chk-pipeline');
+
+  if (presetType === 'full_hunt') {
+    if (chips[0]) chips[0].classList.add('active-bengaluru');
+    if (rolesInput) rolesInput.value = "Full Stack Developer, Python Developer, Software Engineer";
+    if (companiesInput) companiesInput.value = "Sandisk, Amazon, Swiggy, Zepto, Google, Razorpay, Flipkart, CRED";
+    if (locInput) locInput.value = "Bengaluru, Karnataka, India";
+    if (threshSelect) threshSelect.value = "75";
+    if (chkTailor) chkTailor.checked = true;
+    if (chkHr) chkHr.checked = true;
+    if (chkPipeline) chkPipeline.checked = true;
+    showToast("Preset Applied: Full Auto-Pilot Hunt across Bengaluru Tech Giants!", "info");
+  } else if (presetType === 'target_companies') {
+    if (chips[1]) chips[1].classList.add('active-bengaluru');
+    if (rolesInput) rolesInput.value = "Software Engineer, Backend Developer, SDE";
+    if (companiesInput) companiesInput.value = "Sandisk, Swiggy, Zepto, Razorpay";
+    if (locInput) locInput.value = "Bengaluru, Karnataka, India";
+    if (threshSelect) threshSelect.value = "70";
+    if (chkTailor) chkTailor.checked = true;
+    if (chkHr) chkHr.checked = true;
+    if (chkPipeline) chkPipeline.checked = true;
+    showToast("Preset Applied: Target Companies Deep Crawl & Scout!", "info");
+  } else if (presetType === 'tailor_batch') {
+    if (chips[2]) chips[2].classList.add('active-bengaluru');
+    if (rolesInput) rolesInput.value = "Software Engineer, Python Developer";
+    if (companiesInput) companiesInput.value = "";
+    if (locInput) locInput.value = "Bengaluru, Karnataka, India";
+    if (threshSelect) threshSelect.value = "65";
+    if (chkTailor) chkTailor.checked = true;
+    if (chkHr) chkHr.checked = false;
+    if (chkPipeline) chkPipeline.checked = true;
+    showToast("Preset Applied: Fast Resume Batch Tailoring!", "info");
+  }
+};
+
+async function loadAgentInitialState() {
+  try {
+    // 1. Load LLM configuration
+    const cfgRes = await fetch('/api/agent/config');
+    const cfgData = await cfgRes.json();
+    if (cfgData.success && cfgData.config) {
+      const cfg = cfgData.config;
+      const provSelect = document.getElementById('agent-llm-provider');
+      const urlInput = document.getElementById('agent-llm-url');
+      const modelInput = document.getElementById('agent-llm-model');
+      const badge = document.getElementById('agent-llm-badge');
+
+      if (provSelect) provSelect.value = cfg.provider || 'ollama';
+      if (urlInput) urlInput.value = cfg.base_url || 'http://localhost:11434';
+      if (modelInput) modelInput.value = cfg.model_name || 'llama3.2';
+      if (badge) {
+        badge.innerText = `⚡ LLM: ${(cfg.provider || 'Ollama').toUpperCase()} (${cfg.model_name || 'auto'})`;
+      }
+    }
+
+    // 2. Load Agent status
+    const statusRes = await fetch('/api/agent/status');
+    const statusData = await statusRes.json();
+    const s = statusData.status || statusData.agent;
+    if (statusData.success && s) {
+      updateAgentUI(s);
+      if (s.state === 'running') {
+        startAgentPolling();
+      } else if (s.deliverables && s.deliverables.length > 0) {
+        lastAgentDeliverables = s.deliverables;
+        lastAgentHrLeads = s.hr_leads || [];
+        renderAgentDeliverables(s);
+      }
+    }
+  } catch (err) {
+    console.error("Failed to load agent initial state:", err);
+  }
+}
+
+async function testLocalModelConnection() {
+  const btn = document.getElementById('btn-test-local-llm');
+  const titleElem = document.getElementById('agent-llm-status-title');
+  const descElem = document.getElementById('agent-llm-status-desc');
+  const badge = document.getElementById('agent-llm-badge');
+
+  const provider = document.getElementById('agent-llm-provider').value;
+  const baseUrl = document.getElementById('agent-llm-url').value.trim();
+  const modelName = document.getElementById('agent-llm-model').value.trim();
+
+  const origBtnText = btn.innerHTML;
+  btn.innerHTML = `<span>⏳ Probing ${escapeHtml(provider)}...</span>`;
+  btn.disabled = true;
+
+  titleElem.innerHTML = `🔍 Testing connection to <code>${escapeHtml(baseUrl)}</code>...`;
+  descElem.innerText = "Sending ping and querying available models...";
+
+  try {
+    const res = await fetch('/api/agent/test-local-model', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: provider,
+        base_url: baseUrl,
+        model_name: modelName
+      })
+    });
+    const data = await res.json();
+
+    if (data.success && data.connected) {
+      titleElem.innerHTML = `<span style="color: var(--accent-emerald);">✅ Local Engine Online & Ready!</span> (Provider: <b>${escapeHtml(provider)}</b>)`;
+      
+      let modelsHtml = "";
+      if (data.available_models && data.available_models.length > 0) {
+        modelsHtml = `<div style="margin-top: 0.5rem; font-size: 0.75rem;"><b>Detected Models:</b> ` +
+          data.available_models.map(m => `<span class="filter-chip" style="font-size: 0.7rem; padding: 0.15rem 0.45rem; margin-right: 0.25rem;" onclick="document.getElementById('agent-llm-model').value='${escapeHtml(m)}';">${escapeHtml(m)}</span>`).join('') +
+          `</div>`;
+      }
+      
+      descElem.innerHTML = `Connected to <b>${escapeHtml(baseUrl)}</b>. Model active: <code>${escapeHtml(modelName || 'default')}</code>.${modelsHtml}`;
+      if (badge) badge.innerText = `⚡ LLM: ${provider.toUpperCase()} (${modelName || 'online'})`;
+      showToast(`Local ${provider} connected successfully!`, "success");
+    } else {
+      titleElem.innerHTML = `<span style="color: var(--accent-rose);">⚠️ Local Server Not Responding</span>`;
+      descElem.innerHTML = `
+        Cannot reach <code>${escapeHtml(baseUrl)}</code>.<br>
+        • If using <b>Ollama</b>: Start it in terminal via <code>ollama run llama3.2</code> or <code>ollama serve</code>.<br>
+        • If using <b>LM Studio</b>: Open LM Studio & click 'Start Local Server' (port 1234).<br>
+        <span style="color: #fbbf24;">ℹ️ Don't worry: The agent will run with built-in heuristic ATS intelligence until the model is started.</span>
+      `;
+      showToast("Local model unreachable - Heuristic fallback active", "warning");
+    }
+  } catch (err) {
+    titleElem.innerHTML = `<span style="color: var(--accent-rose);">❌ Network Error</span>`;
+    descElem.innerText = err.message || "Failed to reach backend test route.";
+    showToast("Error testing model connection", "error");
+  } finally {
+    btn.innerHTML = origBtnText;
+    btn.disabled = false;
+  }
+}
+
+async function saveAgentLlmConfig() {
+  const provider = document.getElementById('agent-llm-provider').value;
+  const baseUrl = document.getElementById('agent-llm-url').value.trim();
+  const modelName = document.getElementById('agent-llm-model').value.trim();
+  const badge = document.getElementById('agent-llm-badge');
+
+  try {
+    const res = await fetch('/api/agent/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: provider,
+        base_url: baseUrl,
+        model_name: modelName
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (badge) badge.innerText = `⚡ LLM: ${provider.toUpperCase()} (${modelName || 'auto'})`;
+      showToast("Local model configuration saved!", "success");
+    } else {
+      showToast(data.error || "Failed to save config", "error");
+    }
+  } catch (err) {
+    showToast("Error saving LLM config", "error");
+  }
+}
+
+async function launchAgentMission(e) {
+  if (e) e.preventDefault();
+
+  const targetRoles = document.getElementById('agent-target-roles').value.trim();
+  const targetCompanies = document.getElementById('agent-target-companies').value.trim();
+  const targetLoc = document.getElementById('agent-target-loc').value.trim();
+  const minThreshold = parseInt(document.getElementById('agent-min-threshold').value) || 75;
+  const autoTailor = document.getElementById('agent-chk-tailor').checked;
+  const autoHr = document.getElementById('agent-chk-hr').checked;
+  const autoPipeline = document.getElementById('agent-chk-pipeline').checked;
+
+  if (!targetRoles && !targetCompanies) {
+    showToast("Please specify at least target roles or target companies", "warning");
+    return;
+  }
+
+  // UI state transition
+  document.getElementById('btn-launch-agent').style.display = 'none';
+  document.getElementById('btn-stop-agent').style.display = 'inline-flex';
+  
+  const stateBadge = document.getElementById('agent-state-badge');
+  stateBadge.className = 'agent-status-badge status-running';
+  stateBadge.innerText = '⚡ Agent Running...';
+
+  // Clear previous terminal and deliverables
+  const terminal = document.getElementById('agent-live-terminal');
+  if (terminal) {
+    terminal.innerHTML = `<div class="terminal-line"><span class="t-time">${new Date().toLocaleTimeString()}</span><span class="t-level-info">[SYS]</span><span class="t-msg">Launching JobPulse Autonomous Mission...</span></div>`;
+  }
+  lastAgentLogCount = 0;
+  document.getElementById('agent-results-container').style.display = 'none';
+
+  try {
+    const res = await fetch('/api/agent/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        target_roles: targetRoles,
+        target_companies: targetCompanies,
+        target_location: targetLoc,
+        min_match_threshold: minThreshold,
+        auto_tailor_cv: autoTailor,
+        auto_discover_hr: autoHr,
+        auto_apply_pipeline: autoPipeline
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      showToast("Mission started! Agent is operating autonomously in background.", "success");
+      startAgentPolling();
+    } else {
+      showToast(data.error || "Failed to start agent mission", "error");
+      resetAgentButtons();
+    }
+  } catch (err) {
+    showToast("Error starting mission: " + err.message, "error");
+    resetAgentButtons();
+  }
+}
+
+async function stopAgentMission() {
+  const stopBtn = document.getElementById('btn-stop-agent');
+  stopBtn.disabled = true;
+  stopBtn.innerText = "🛑 Aborting...";
+
+  try {
+    const res = await fetch('/api/agent/stop', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast("Abort command sent to agent", "info");
+      appendTerminalLine("SYS", "Abort signal acknowledged by user. Gracefully winding down...", "warning");
+    }
+  } catch (err) {
+    showToast("Failed to abort mission", "error");
+  }
+}
+
+function startAgentPolling() {
+  if (agentPollingInterval) clearInterval(agentPollingInterval);
+  agentPollingInterval = setInterval(pollAgentStatus, 1200);
+  pollAgentStatus();
+}
+
+async function pollAgentStatus() {
+  try {
+    const res = await fetch('/api/agent/status');
+    const data = await res.json();
+    const s = data.status || data.agent;
+    if (!data.success || !s) return;
+
+    updateAgentUI(s);
+
+    if (s.state !== 'running') {
+      if (agentPollingInterval) {
+        clearInterval(agentPollingInterval);
+        agentPollingInterval = null;
+      }
+      resetAgentButtons();
+
+      if (s.state === 'completed') {
+        showToast("Agent mission completed successfully!", "success");
+      } else if (s.state === 'aborted') {
+        showToast("Agent mission aborted.", "info");
+      } else if (s.state === 'error') {
+        showToast("Agent mission encountered an error.", "error");
+      }
+
+      // If deliverables exist, render them
+      if (s.deliverables && s.deliverables.length > 0) {
+        lastAgentDeliverables = s.deliverables;
+        lastAgentHrLeads = s.hr_leads || [];
+        renderAgentDeliverables(s);
+      }
+    }
+  } catch (err) {
+    console.error("Error polling agent status:", err);
+  }
+}
+
+function updateAgentUI(s) {
+  // Update badge
+  const badge = document.getElementById('agent-state-badge');
+  if (badge) {
+    badge.className = `agent-status-badge status-${s.state || 'idle'}`;
+    if (s.state === 'running') badge.innerText = '⚡ Agent Running...';
+    else if (s.state === 'completed') badge.innerText = '✅ Mission Complete';
+    else if (s.state === 'aborted') badge.innerText = '🛑 Mission Aborted';
+    else if (s.state === 'error') badge.innerText = '⚠️ Execution Error';
+    else badge.innerText = '🟢 Agent Idle';
+  }
+
+  // Progress Bar
+  const pct = Math.min(100, Math.max(0, s.progress_pct || 0));
+  const fill = document.getElementById('agent-progress-fill');
+  const pctElem = document.getElementById('agent-progress-pct');
+  if (fill) fill.style.width = `${pct}%`;
+  if (pctElem) pctElem.innerText = `${pct}%`;
+
+  // Step labels
+  const phaseLabel = document.getElementById('agent-current-step-label');
+  const phaseText = document.getElementById('agent-current-step-text');
+  if (phaseLabel && s.current_phase) phaseLabel.innerText = `Current Phase: ${s.current_phase}`;
+  if (phaseText && s.current_step_text) phaseText.innerText = s.current_step_text;
+
+  // Step Pills (1 to 6)
+  const currentPhaseNum = s.phase_num || 0;
+  for (let i = 1; i <= 6; i++) {
+    const pillElem = document.getElementById(`pill-step-${i}`);
+    if (pillElem) {
+      pillElem.classList.remove('active', 'completed');
+      if (i < currentPhaseNum) {
+        pillElem.classList.add('completed');
+      } else if (i === currentPhaseNum) {
+        pillElem.classList.add('active');
+      }
+    }
+  }
+
+  // Live Terminal Logs
+  if (s.logs && s.logs.length > lastAgentLogCount) {
+    const newLogs = s.logs.slice(lastAgentLogCount);
+    const terminal = document.getElementById('agent-live-terminal');
+    if (terminal) {
+      newLogs.forEach(line => {
+        const div = document.createElement('div');
+        div.className = 'terminal-line';
+        
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 't-time';
+        timeSpan.innerText = line.timestamp || '';
+
+        const levelSpan = document.createElement('span');
+        const lvl = (line.level || 'info').toLowerCase();
+        levelSpan.className = `t-level-${lvl}`;
+        levelSpan.innerText = `[${(line.level || 'INFO').toUpperCase()}]`;
+
+        const msgSpan = document.createElement('span');
+        msgSpan.className = 't-msg';
+        msgSpan.innerText = ` ${line.message}`;
+
+        div.appendChild(timeSpan);
+        div.appendChild(levelSpan);
+        div.appendChild(msgSpan);
+        terminal.appendChild(div);
+      });
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+    lastAgentLogCount = s.logs.length;
+  }
+}
+
+function appendTerminalLine(tag, msg, lvl = 'info') {
+  const terminal = document.getElementById('agent-live-terminal');
+  if (!terminal) return;
+  const div = document.createElement('div');
+  div.className = 'terminal-line';
+  div.innerHTML = `<span class="t-time">${new Date().toLocaleTimeString()}</span><span class="t-level-${lvl}">[${tag}]</span><span class="t-msg"> ${escapeHtml(msg)}</span>`;
+  terminal.appendChild(div);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+function resetAgentButtons() {
+  const launchBtn = document.getElementById('btn-launch-agent');
+  const stopBtn = document.getElementById('btn-stop-agent');
+  if (launchBtn) launchBtn.style.display = 'inline-flex';
+  if (stopBtn) {
+    stopBtn.style.display = 'none';
+    stopBtn.disabled = false;
+    stopBtn.innerHTML = `<span>🛑 Abort Mission</span>`;
+  }
+}
+
+function renderAgentDeliverables(status) {
+  const container = document.getElementById('agent-results-container');
+  if (!container) return;
+  container.style.display = 'block';
+
+  // Metrics
+  const mScraped = document.getElementById('metric-scraped');
+  const mEval = document.getElementById('metric-evaluated');
+  const mHigh = document.getElementById('metric-high-matches');
+  const mTailored = document.getElementById('metric-tailored');
+
+  if (mScraped) mScraped.innerText = status.stats ? status.stats.vacancies_crawled : (status.deliverables.length * 2);
+  if (mEval) mEval.innerText = status.stats ? status.stats.evaluated_count : status.deliverables.length;
+  if (mHigh) mHigh.innerText = status.deliverables.length;
+  if (mTailored) mTailored.innerText = status.stats ? status.stats.tailored_count : status.deliverables.filter(d => d.tailored_tex).length;
+
+  // Deliverables Sheets Table
+  renderAgentDeliverablesTable(status.deliverables);
+
+  // HR Leads
+  if (status.hr_leads && status.hr_leads.length > 0) {
+    renderAgentHrLeads(status.hr_leads);
+  }
+}
+
+function renderAgentDeliverablesTable(deliverables) {
+  const container = document.getElementById('agent-jobs-table-container');
+  if (!container) return;
+
+  if (!deliverables || deliverables.length === 0) {
+    container.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No qualified opportunities matched the threshold. Try lowering the threshold or broadening roles!</div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="sheets-table">
+      <thead>
+        <tr>
+          <th style="width: 95px;">Match</th>
+          <th>Role Title</th>
+          <th>Company</th>
+          <th>Location</th>
+          <th>Auto-Tailored Resume</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${deliverables.map(job => {
+          const score = job.match_score || 75;
+          let scoreClass = 'badge-match';
+          if (score >= 80) scoreClass = 'badge-offer';
+          else if (score >= 70) scoreClass = 'badge-ats';
+
+          const texFile = job.tailored_tex;
+          const pdfFile = job.pdf_filename;
+
+          return `
+            <tr>
+              <td>
+                <span class="badge ${scoreClass}" style="font-weight: 700; font-size: 0.8rem;">
+                  ${score}% Match
+                </span>
+              </td>
+              <td>
+                <div style="font-weight: 600; color: #fff;">${escapeHtml(job.title)}</div>
+                ${job.missing_keywords && job.missing_keywords.length ? `
+                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">
+                    Target skills: ${escapeHtml(job.missing_keywords.slice(0, 3).join(', '))}
+                  </div>
+                ` : ''}
+              </td>
+              <td>
+                <span style="color: var(--accent-cyan); font-weight: 600;">${escapeHtml(job.company)}</span>
+              </td>
+              <td style="color: var(--text-secondary); font-size: 0.825rem;">
+                ${escapeHtml(job.location || 'Bengaluru, India')}
+              </td>
+              <td>
+                ${texFile ? `
+                  <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                    <button class="btn btn-secondary btn-sm" onclick="openAgentJobInLatex('${job.id || ''}', '${escapeHtml(texFile)}')" title="Edit this tailored LaTeX resume in CV Studio">
+                      📄 Studio
+                    </button>
+                    <a href="/api/latex/download/${encodeURIComponent(texFile)}" class="btn btn-secondary btn-sm" style="color: var(--accent-emerald);" download title="Download .tex file">
+                      📥 .tex
+                    </a>
+                    ${pdfFile ? `
+                      <a href="/api/latex/download/${encodeURIComponent(pdfFile)}" class="btn btn-secondary btn-sm" style="color: var(--accent-cyan);" download title="Download PDF">
+                        📥 PDF
+                      </a>
+                    ` : ''}
+                  </div>
+                ` : `<span style="font-size: 0.75rem; color: var(--text-muted);">Standard CV</span>`}
+              </td>
+              <td style="text-align: right;">
+                <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
+                  ${job.apply_url ? `
+                    <a href="${escapeHtml(job.apply_url)}" target="_blank" class="btn btn-primary btn-sm">
+                      Apply ↗
+                    </a>
+                  ` : ''}
+                  <button class="btn btn-secondary btn-sm" onclick="findCompanyContacts('${escapeHtml(job.company)}')" title="Find HR Recruiters">
+                    👥 HR
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
   `;
 }
 
-// --- Tab 3: Pipeline & Kanban ---
+function renderAgentHrLeads(leads) {
+  const section = document.getElementById('agent-hr-leads-section');
+  const container = document.getElementById('agent-hr-leads-container');
+  if (!section || !container) return;
+
+  section.style.display = 'block';
+
+  // Push to currentDiscoveredContacts so existing outreach modal can access
+  leads.forEach(l => {
+    if (!currentDiscoveredContacts.some(c => c.id === l.id)) {
+      currentDiscoveredContacts.push(l);
+    }
+  });
+
+  container.innerHTML = leads.map(l => {
+    return `
+      <div class="job-card" style="padding: 1rem; border-color: rgba(99, 102, 241, 0.3);">
+        <div class="job-card-top" style="margin-bottom: 0.4rem;">
+          <div>
+            <div style="font-size: 1rem; font-weight: 700; color: #fff;">${escapeHtml(l.name)}</div>
+            <div style="font-size: 0.8rem; color: var(--accent-cyan); font-weight: 500;">
+              ${escapeHtml(l.role_category || 'Talent Acquisition')} @ ${escapeHtml(l.company)}
+            </div>
+          </div>
+          <span class="badge badge-ats">Verified Recruiter</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.35; margin-bottom: 0.6rem;">
+          ${escapeHtml(l.headline || '')}
+        </div>
+        ${l.predicted_email ? `
+          <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.6rem;">
+            📧 <code>${escapeHtml(l.predicted_email)}</code>
+          </div>
+        ` : ''}
+        <div class="job-card-actions" style="margin-top: 0.5rem;">
+          <a href="${escapeHtml(l.profile_url || '#')}" target="_blank" class="btn btn-secondary btn-sm">
+            🔗 LinkedIn ↗
+          </a>
+          <button class="btn btn-gradient btn-sm" onclick="openOutreachForContact('${l.id}')">
+            ✉️ Referral Pitch
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.openAgentJobInLatex = async function(jobId, texFilename) {
+  switchTab('tab-latex');
+  try {
+    const res = await fetch(`/api/latex/view/${encodeURIComponent(texFilename)}`);
+    const data = await res.json();
+    if (data.success && data.content) {
+      document.getElementById('latex-code-output').value = data.content;
+      lastGeneratedTexFilename = texFilename;
+      renderCvPreview(data.content);
+      showToast(`Loaded tailored resume: ${texFilename}`, "success");
+    }
+  } catch (err) {
+    showToast("Opened LaTeX Studio. Ready to compile!", "info");
+  }
+};
+
+// --- Tab 3: Pipeline (Sheets View & Kanban) ---
+let selectedPipelineJobIds = new Set();
+let pipelineViewMode = 'sheets';
+
 async function initPipeline() {
   document.getElementById('btn-refresh-pipeline').addEventListener('click', loadPipeline);
   document.getElementById('pipeline-filter-status').addEventListener('change', loadPipeline);
   document.getElementById('pipeline-search-input').addEventListener('input', debounce(loadPipeline, 300));
-  
+
+  const sheetsBtn = document.getElementById('btn-view-sheets');
+  const kanbanBtn = document.getElementById('btn-view-kanban');
+  if (sheetsBtn && kanbanBtn) {
+    sheetsBtn.addEventListener('click', () => {
+      pipelineViewMode = 'sheets';
+      sheetsBtn.classList.add('active');
+      kanbanBtn.classList.remove('active');
+      document.getElementById('pipeline-sheets-view').style.display = 'block';
+      document.getElementById('kanban-board').style.display = 'none';
+    });
+    kanbanBtn.addEventListener('click', () => {
+      pipelineViewMode = 'kanban';
+      kanbanBtn.classList.add('active');
+      sheetsBtn.classList.remove('active');
+      document.getElementById('pipeline-sheets-view').style.display = 'none';
+      document.getElementById('kanban-board').style.display = 'grid';
+    });
+  }
+
+  // Pipeline Batch Delete
+  const batchDeleteBtn = document.getElementById('btn-pipeline-batch-delete');
+  if (batchDeleteBtn) {
+    batchDeleteBtn.addEventListener('click', async () => {
+      const ids = Array.from(selectedPipelineJobIds);
+      if (ids.length === 0) return;
+      if (!confirm(`Are you sure you want to delete ${ids.length} tracked application(s)?`)) return;
+
+      try {
+        const res = await fetch('/api/jobs/batch-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_ids: ids })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Deleted ${data.deleted_count || ids.length} applications from tracker`, "info");
+          selectedPipelineJobIds.clear();
+          loadPipeline();
+        } else {
+          showToast(data.error || "Batch delete failed", "error");
+        }
+      } catch (err) {
+        showToast("Error executing batch delete", "error");
+      }
+    });
+  }
+
+  // Pipeline Batch Status Dropdown
+  const batchStatusSelect = document.getElementById('pipeline-batch-status-select');
+  if (batchStatusSelect) {
+    batchStatusSelect.addEventListener('change', async () => {
+      const newStatus = batchStatusSelect.value;
+      const ids = Array.from(selectedPipelineJobIds);
+      if (!newStatus || ids.length === 0) return;
+
+      try {
+        const res = await fetch('/api/jobs/batch-status', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_ids: ids, status: newStatus })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Updated ${ids.length} applications to '${newStatus}'`, "success");
+          batchStatusSelect.selectedIndex = 0;
+          selectedPipelineJobIds.clear();
+          loadPipeline();
+        }
+      } catch (err) {
+        showToast("Error updating statuses", "error");
+      }
+    });
+  }
+
+  // Clear pipeline selection
+  const clearSelBtn = document.getElementById('btn-pipeline-clear-sel');
+  if (clearSelBtn) {
+    clearSelBtn.addEventListener('click', () => {
+      selectedPipelineJobIds.clear();
+      document.querySelectorAll('.pipeline-row-chk').forEach(c => c.checked = false);
+      document.querySelectorAll('#pipeline-sheets-view tr').forEach(r => r.classList.remove('row-selected'));
+      const batchBar = document.getElementById('pipeline-batch-bar');
+      if (batchBar) batchBar.style.display = 'none';
+      const selCount = document.getElementById('pipeline-selected-count');
+      if (selCount) selCount.innerText = '0';
+    });
+  }
+
   const pushSheetsBtn = document.getElementById('btn-pipeline-sync-sheets');
-  pushSheetsBtn.addEventListener('click', syncSheets);
-  document.getElementById('btn-sync-sheets').addEventListener('click', syncSheets);
+  if (pushSheetsBtn) pushSheetsBtn.addEventListener('click', syncSheets);
+  const syncBtn = document.getElementById('btn-sync-sheets');
+  if (syncBtn) syncBtn.addEventListener('click', syncSheets);
+
+  // Pipeline CSV Export
+  const exportPipelineCsvBtn = document.getElementById('btn-export-pipeline-csv');
+  if (exportPipelineCsvBtn) {
+    exportPipelineCsvBtn.addEventListener('click', () => {
+      exportJobsToCsv('JobPulse_Pipeline_Applications.csv', allTrackedJobs);
+    });
+  }
 }
 
 async function loadPipeline() {
@@ -547,12 +1916,164 @@ async function loadPipeline() {
     const data = await res.json();
     if (data.success) {
       allTrackedJobs = data.jobs;
+      renderPipelineSheets(data.jobs);
       renderKanban(data.jobs);
       initStats();
     }
   } catch (err) {
     console.error("Failed to load pipeline:", err);
   }
+}
+
+function renderPipelineSheets(jobs) {
+  const container = document.getElementById('pipeline-sheets-view');
+  const batchBar = document.getElementById('pipeline-batch-bar');
+  const countElem = document.getElementById('pipeline-selected-count');
+
+  selectedPipelineJobIds.clear();
+  if (batchBar) batchBar.style.display = 'none';
+  if (countElem) countElem.innerText = '0';
+
+  if (!jobs || jobs.length === 0) {
+    container.innerHTML = `<div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">No tracked applications found. Scrape or add jobs to populate your pipeline!</div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="sheets-table">
+      <thead>
+        <tr>
+          <th class="sheets-checkbox-cell">
+            <input type="checkbox" id="pipeline-select-all" class="sheets-custom-checkbox" title="Select All">
+          </th>
+          <th style="min-width: 140px;">Company</th>
+          <th style="min-width: 220px;">Role / Title</th>
+          <th style="min-width: 130px;">Location</th>
+          <th style="min-width: 130px;">Status</th>
+          <th style="min-width: 120px;">Source / ATS</th>
+          <th style="min-width: 100px;">Date Added</th>
+          <th style="min-width: 110px;">Portal Link</th>
+          <th style="min-width: 160px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${jobs.map(job => {
+          const st = job.status || 'Wishlist';
+          return `
+            <tr id="pipeline-row-${job.id}" data-job-id="${job.id}">
+              <td class="sheets-checkbox-cell">
+                <input type="checkbox" class="sheets-custom-checkbox pipeline-row-chk" data-job-id="${job.id}">
+              </td>
+              <td>
+                <div class="sheets-company-cell">
+                  <span>🏢</span>
+                  <span>${escapeHtml(job.company)}</span>
+                </div>
+              </td>
+              <td>
+                <a href="${escapeHtml(job.job_url || '#')}" target="_blank" class="sheets-title-link" title="${escapeHtml(job.title)}">
+                  ${escapeHtml(job.title)}
+                </a>
+              </td>
+              <td>
+                <div class="sheets-location-cell" title="${escapeHtml(job.location || 'Remote')}">
+                  📍 ${escapeHtml(job.location || 'Remote')}
+                </div>
+              </td>
+              <td>
+                <select class="sheets-status-dropdown" data-status="${st}" onchange="changeJobStatus('${job.id}', this.value)">
+                  <option value="Wishlist" ${st === 'Wishlist' ? 'selected' : ''}>🌟 Wishlist</option>
+                  <option value="Applied" ${st === 'Applied' ? 'selected' : ''}>🚀 Applied</option>
+                  <option value="Interviewing" ${st === 'Interviewing' ? 'selected' : ''}>💬 Interviewing</option>
+                  <option value="Offer" ${st === 'Offer' ? 'selected' : ''}>🏆 Offer</option>
+                  <option value="Rejected" ${st === 'Rejected' ? 'selected' : ''}>❌ Rejected</option>
+                </select>
+              </td>
+              <td>
+                <span class="badge badge-source" style="font-size: 0.72rem;">${escapeHtml(job.ats_provider || job.source || 'Scraper')}</span>
+              </td>
+              <td style="font-size: 0.75rem; color: var(--text-muted);">
+                ${escapeHtml((job.created_at || '').slice(0, 10) || 'Recent')}
+              </td>
+              <td>
+                ${job.career_page_url || job.job_url ? `
+                  <a href="${escapeHtml(job.career_page_url || job.job_url)}" target="_blank" class="btn-icon-sm" style="color: var(--accent-cyan);" title="Open application link">
+                    ↗ Link
+                  </a>` : '<span style="color: var(--text-muted); font-size: 0.75rem;">—</span>'}
+              </td>
+              <td>
+                <div class="sheets-actions-cell">
+                  <button class="btn-icon-sm" onclick="findCompanyContacts('${escapeHtml(job.company)}')" title="Find HR contacts">
+                    👥 HR
+                  </button>
+                  <button class="btn-icon-sm" onclick="tailorForJob('${job.id}')" title="Tailor LaTeX CV">
+                    📄 CV
+                  </button>
+                  <button class="btn-icon-sm btn-danger" onclick="deleteJob('${job.id}')" title="Delete application">
+                    🗑️
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+
+  // Attach pipeline selection listeners
+  initPipelineSelectionEvents();
+}
+
+function initPipelineSelectionEvents() {
+  const selectAll = document.getElementById('pipeline-select-all');
+  const rowCheckboxes = document.querySelectorAll('.pipeline-row-chk');
+  const batchBar = document.getElementById('pipeline-batch-bar');
+  const countElem = document.getElementById('pipeline-selected-count');
+
+  function updateBatchBar() {
+    const count = selectedPipelineJobIds.size;
+    if (countElem) countElem.innerText = count;
+    if (batchBar) batchBar.style.display = count > 0 ? 'flex' : 'none';
+    if (selectAll) {
+      selectAll.checked = count > 0 && count === rowCheckboxes.length;
+      selectAll.indeterminate = count > 0 && count < rowCheckboxes.length;
+    }
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener('change', () => {
+      const isChecked = selectAll.checked;
+      rowCheckboxes.forEach(chk => {
+        chk.checked = isChecked;
+        const jid = chk.dataset.jobId;
+        const row = document.getElementById(`pipeline-row-${jid}`);
+        if (isChecked) {
+          selectedPipelineJobIds.add(jid);
+          if (row) row.classList.add('row-selected');
+        } else {
+          selectedPipelineJobIds.delete(jid);
+          if (row) row.classList.remove('row-selected');
+        }
+      });
+      updateBatchBar();
+    });
+  }
+
+  rowCheckboxes.forEach(chk => {
+    chk.addEventListener('change', () => {
+      const jid = chk.dataset.jobId;
+      const row = document.getElementById(`pipeline-row-${jid}`);
+      if (chk.checked) {
+        selectedPipelineJobIds.add(jid);
+        if (row) row.classList.add('row-selected');
+      } else {
+        selectedPipelineJobIds.delete(jid);
+        if (row) row.classList.remove('row-selected');
+      }
+      updateBatchBar();
+    });
+  });
 }
 
 function renderKanban(jobs) {
@@ -863,6 +2384,28 @@ function tailorForJob(jobId) {
       generateCv(true);
     }
   }, 200);
+}
+
+async function inspectJobAi(jobId) {
+  switchTab('tab-ai');
+  try {
+    const res = await fetch(`/api/jobs/${jobId}`);
+    const data = await res.json();
+    if (data.success && data.job) {
+      const job = data.job;
+      const jdInput = document.getElementById('ai-jd-input');
+      if (jdInput) {
+        jdInput.value = `${job.title} at ${job.company}\nLocation: ${job.location || 'Bengaluru'}\nSource: ${job.source || ''}\n\n${job.description || 'Job details and requirements for ' + job.title + ' at ' + job.company}`;
+      }
+      const analyzeBtn = document.getElementById('btn-analyze-jd');
+      if (analyzeBtn) {
+        analyzeBtn.click();
+      }
+      showToast(`Analyzing JD for ${job.title} with ATS AI engine...`, "info");
+    }
+  } catch (err) {
+    console.error("Error inspecting job with AI:", err);
+  }
 }
 
 // --- Tab 5: AI JD Inspector & Outreach ---

@@ -1,0 +1,184 @@
+{
+  "sandisk": {
+    "company": "Sandisk",
+    "official_site": "https://www.westerndigital.com",
+    "career_page_url": "https://careers.westerndigital.com/",
+    "ats_provider": "Direct Portal",
+    "careers_links_found": [
+      "https://careers.westerndigital.com/"
+    ],
+    "crawled_data": {
+      "status_code": 200,
+      "page_title": "",
+      "meta_description": "",
+      "open_roles_sample": [],
+      "open_roles_structured": [],
+      "has_job_search": false
+    }
+  },
+  "amazon": {
+    "company": "Amazon",
+    "official_site": "https://www.amazon.com",
+    "career_page_url": "https://www.amazon.jobs/",
+    "ats_provider": "Direct Portal",
+    "careers_links_found": [
+      "https://www.amazon.jobs/"
+    ],
+    "crawled_data": {
+      "status_code": 200,
+      "page_title": "Amazon Careers: Impact the Future, Today",
+      "meta_description": "Explore corporate jobs and career programs at Amazon, from full-time roles to internships. Join our global teams and create a better future for our customers.",
+      "open_roles_sample": [],
+      "open_roles_structured": [],
+      "has_job_search": false
+    }
+  },
+  "flipkart": {
+    "company": "Flipkart",
+    "official_site": "https://www.flipkart.com",
+    "career_page_url": "https://www.flipkartcareers.com/",
+    "ats_provider": "Direct Portal",
+    "careers_links_found": [
+      "https://www.flipkartcareers.com/"
+    ],
+    "crawled_data": {
+      "status_code": 200,
+      "page_title": "Flipkart Careers - Maximise Your Potential",
+      "meta_description": "",
+      "open_roles_sample": [],
+      "open_roles_structured": [],
+      "has_job_search": false
+    }
+  },
+  "swiggy": {
+    "company": "Swiggy",
+    "official_site": "https://www.swiggy.com",
+    "career_page_url": "https://careers.swiggy.com/",
+    "ats_provider": "Workday",
+    "careers_links_found": [
+      "https://careers.swiggy.com/"
+    ],
+    "crawled_data": {
+      "status_code": 200,
+      "page_title": "Swiggy Careers - Build, Scale, Deliver India's Everyday Needs",
+      "meta_description": "Swiggy Careers - Join India's leading food delivery platform. Explore tech, non-tech, and early career opportunities at Swiggy.",
+      "open_roles_sample": [],
+      "open_roles_structured": [],
+      "has_job_search": false
+    }
+  },
+  "ibm": {
+    "company": "IBM",
+    "official_site": "https://www.ibm.com",
+    "career_page_url": "https://www.ibm.com/careers",
+    "ats_provider": "Direct Portal",
+    "careers_links_found": [
+      "https://www.ibm.com/careers"
+    ],
+    "crawled_data": {
+      "status_code": 200,
+      "page_title": "Define your career with IBM",
+      "meta_description": "Our curiosity runs deep, that's why we let you explore new paths at your own speed, making sure you're constantly learning and thriving.",
+      "open_roles_sample": [],
+      "open_roles_structured": [],
+      "has_job_search": false
+    }
+  },
+  "qualcomm": {
+    "company": "Qualcomm",
+    "official_site": "https://www.qualcomm.com",
+    "career_page_url": "https://qualcomm.wd5.myworkdayjobs.com/External",
+    "ats_provider": "Workday",
+    "careers_links_found": [
+      "https://qualcomm.wd5.myworkdayjobs.com/External"
+    ],
+    "crawled_data": {
+      "status_code": 200,
+      "page_title": "",
+      "meta_description": "",
+      "open_roles_sample": [],
+      "open_roles_structured": [],
+      "has_job_search": false
+    }
+  },
+  "zepto": {
+    "company": "Zepto",
+    "official_site": "https://www.zeptonow.com",
+    "career_page_url": "https://www.zeptonow.com/careers",
+    "ats_provider": "Greenhouse",
+    "careers_links_found": [
+      "https://www.zeptonow.com/careers"
+    ],
+    "crawled_data": {
+      "status_code": 200,
+      "page_title": "",
+      "meta_description": "",
+      "open_roles_sample": [],
+      "open_roles_structured": [],
+      "has_job_search": false
+    }
+  },
+  "google": {
+    "company": "Google",
+    "official_site": "https://www.google.com",
+    "career_page_url": "https://careers.google.com/",
+    "ats_provider": "Direct Portal",
+    "careers_links_found": [
+      "https://careers.google.com/"
+    ],
+    "crawled_data": {
+      "status_code": 200,
+      "page_title": "Search for your career at Google.",
+      "meta_description": "Join Google Careers and build what's next, today. Explore career opportunities in engineering, design, sales, hardware, and more. Make a global impact with innovative technology that helps billions of users.",
+      "open_roles_sample": [
+        "work_outlinework_outlineJobsJobs",
+        "Know your rights: workplace discrimination is illegal"
+      ],
+      "open_roles_structured": [
+        {
+          "title": "work_outlinework_outlineJobsJobs",
+          "url": "https://careers.google.com/jobs/results"
+        },
+        {
+          "title": "Know your rights: workplace discrimination is illegal",
+          "url": "https://careers.google.com/jobs/dist/legal/EEOC_KnowYourRights_10_20.pdf"
+        }
+      ],
+      "has_job_search": true
+    }
+  },
+  "jumpcloud": {
+    "company": "JumpCloud",
+    "official_site": "",
+    "career_page_url": "https://jobs.lever.co/jumpcloud",
+    "ats_provider": "Lever",
+    "careers_links_found": [
+      "https://jobs.lever.co/jumpcloud"
+    ],
+    "crawled_data": {}
+  },
+  "razorpay": {
+    "company": "Razorpay",
+    "official_site": "https://razorpay.com",
+    "career_page_url": "https://razorpay.com/jobs/",
+    "ats_provider": "Greenhouse",
+    "careers_links_found": [
+      "https://razorpay.com/jobs/"
+    ],
+    "crawled_data": {
+      "status_code": 200,
+      "page_title": "Razorpay Careers | Jobs, Hiring & Career Opportunities at Razorpay",
+      "meta_description": "Join Razorpay \u2014 India's leading fintech powering millions of businesses. Explore openings in engineering, product, design, marketing & more for freshers and experienced professionals.",
+      "open_roles_sample": [
+        "Careers"
+      ],
+      "open_roles_structured": [
+        {
+          "title": "Careers",
+          "url": "https://razorpay.com/jobs/"
+        }
+      ],
+      "has_job_search": true
+    }
+  }
+}

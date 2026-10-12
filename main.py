@@ -77,7 +77,7 @@ def interactive_cli():
         role = input("\nEnter Target Role(s) (comma-separated, e.g. 'Full Stack Engineer, Python Developer'): ").strip()
         location = input("Location [Default: 'Bengaluru, Karnataka, India']: ").strip() or "Bengaluru, Karnataka, India"
         pref = input("Keywords / Tech Stack (comma-separated, e.g. 'Python, React'): ").strip()
-        ats_only = input("Search direct ATS portals (Greenhouse, Lever, Ashby)? (y/n) [y]: ").strip().lower() != 'n'
+        ats_only = input("Search direct ATS portals (Greenhouse, Lever, Workday, Darwinbox)? (y/n) [y]: ").strip().lower() != 'n'
         
         print("\n⏳ Executing Google search & ATS discovery...")
         results = search_jobs_google(role, location, preferences={"keywords": pref, "ats_only": ats_only}, max_results=10)

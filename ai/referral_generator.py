@@ -23,41 +23,44 @@ def generate_personalized_referral_outreach(
     portfolio = candidate_profile.get("portfolio") or candidate_profile.get("github") or ""
     contact_first = contact_name.split()[0] if contact_name else "there"
 
-    model = get_gemini_model()
+    from ai.local_llm import query_llm
 
-    if model:
-        prompt = f"""
-        You are a top career coach and networking specialist.
-        Write two personalized, polite, and persuasive outreach messages for a job seeker reaching out to an industry contact.
+    prompt = f"""
+    You are a top career coach and networking specialist.
+    Write two personalized, polite, and persuasive outreach messages for a job seeker reaching out to an industry contact.
 
-        Candidate Name: {c_name}
-        Key Skills: {c_skills}
-        Portfolio/GitHub: {portfolio}
-        Target Role: {target_role}
-        Company: {company_name}
-        Target Contact Name: {contact_name} ({contact_role})
-        Outreach Type: {outreach_type} (options: 'referral' to employee, 'recruiter' to HR, 'manager' to engineering lead, 'follow_up')
-        Job Link/ID: {job_id_or_link}
+    Candidate Name: {c_name}
+    Key Skills: {c_skills}
+    Portfolio/GitHub: {portfolio}
+    Target Role: {target_role}
+    Company: {company_name}
+    Target Contact Name: {contact_name} ({contact_role})
+    Outreach Type: {outreach_type} (options: 'referral' to employee, 'recruiter' to HR, 'manager' to engineering lead, 'follow_up')
+    Job Link/ID: {job_id_or_link}
 
-        Requirements:
-        1. "connection_note": STRICTLY under 290 characters (must fit in LinkedIn's 300-char free connection request note). Friendly, respectful, mentions company and role.
-        2. "email_subject": Punchy subject line.
-        3. "full_message": 3 short paragraphs. Clear value proposition, zero fluff, specific low-friction call-to-action (e.g., asking for 5-minute chat or referral).
+    Requirements:
+    1. "connection_note": STRICTLY under 290 characters (must fit in LinkedIn's 300-char free connection request note). Friendly, respectful, mentions company and role.
+    2. "email_subject": Punchy subject line.
+    3. "full_message": 3 short paragraphs. Clear value proposition, zero fluff, specific low-friction call-to-action (e.g., asking for 5-minute chat or referral).
 
-        Return ONLY raw JSON with no Markdown backticks:
-        {{
-          "connection_note": "...",
-          "email_subject": "...",
-          "full_message": "..."
-        }}
-        """
-        try:
-            resp = model.generate_content(prompt)
-            parsed = clean_json(resp.text)
+    Return ONLY raw JSON with no Markdown backticks:
+    {{
+      "connection_note": "...",
+      "email_subject": "...",
+      "full_message": "..."
+    }}
+    """
+
+    system_prompt = "You are a professional networking strategist. Always output valid raw JSON only."
+
+    try:
+        llm_res = query_llm(prompt, system_prompt=system_prompt, json_mode=True)
+        if llm_res.get("success") and llm_res.get("text"):
+            parsed = clean_json(llm_res["text"])
             if parsed.get("connection_note") and parsed.get("full_message"):
                 return parsed
-        except Exception as e:
-            print(f"Gemini referral generation fallback: {e}")
+    except Exception as e:
+        print(f"Local LLM referral generation fallback: {e}")
 
     # High-converting heuristic templates
     if outreach_type == "referral":
