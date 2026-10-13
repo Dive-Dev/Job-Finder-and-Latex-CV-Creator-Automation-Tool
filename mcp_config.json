@@ -1,5 +1,10 @@
 {
   "mcpServers": {
+    "jobpulse-mcp-scraper": {
+      "command": "python",
+      "args": ["scraper/mcp_server.py"],
+      "description": "Free, zero-cost Model Context Protocol (MCP) server for live ATS job feeds, web scraping, and career portal discovery"
+    },
     "jobpulse-sqlite": {
       "command": "npx",
       "args": [
@@ -8,7 +13,15 @@
         "--db-path",
         "./jobs.db"
       ],
-      "description": "Provides direct SQL access to the JobPulse AI database (jobs, user_profile, contacts, company_research)"
+      "description": "Direct SQL access to the JobPulse AI database (jobs, user_profile, contacts, company_research)"
+    },
+    "fetch-scraper": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ],
+      "description": "Free official MCP server for HTML web fetching and markdown conversion"
     },
     "jobpulse-api-bridge": {
       "command": "python",
@@ -16,7 +29,7 @@
       "env": {
         "PORT": "5000"
       },
-      "description": "Standard REST API server exposing /api/jobs, /api/profile, /api/latex, and /api/scrape"
+      "description": "REST API bridge exposing /api/jobs, /api/profile, /api/ai/coder-skill, /api/ai/job-skill, and /api/scrape/mcp"
     }
   }
 }

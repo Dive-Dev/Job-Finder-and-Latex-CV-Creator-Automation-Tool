@@ -144,63 +144,89 @@ def init_db():
     conn.commit()
     conn.close()
 
-def save_job(job_data):
+def is_job_present(job_data):
     """
-    Saves a job with intelligent deduplication:
-    If a job with the same canonical key, normalized URL, or company+title exists,
-    it merges fresh details and updates scores without inserting duplicate rows.
+    Checks if a job is already present in the database.
+    Matches by:
+    1. Canonical deduplication key (normalized company + title)
+    2. Clean canonical job URL
+    3. Normalized company and title text
+    Returns: (is_present: bool, existing_job: dict or None)
     """
+    if not job_data or not isinstance(job_data, dict):
+        return False, None
+
     conn = get_connection()
     cursor = conn.cursor()
-    
-    title = job_data.get('title', 'Unknown Role')
-    company = job_data.get('company', 'Unknown Company')
+
+    title = job_data.get('title', '')
+    company = job_data.get('company', '')
     job_url = job_data.get('job_url', '')
     canonical_key = job_data.get('canonical_key') or compute_canonical_key(company, title, job_url)
     clean_url = normalize_job_url(job_url)
 
-    # Check for existing duplicate in jobs table
-    existing_id = None
-    existing_job = None
-    
     # 1. Match by canonical key
     if canonical_key and not canonical_key.startswith('anon::'):
         cursor.execute("SELECT * FROM jobs WHERE canonical_key = ?", (canonical_key,))
         row = cursor.fetchone()
         if row:
-            existing_job = dict(row)
-            existing_id = existing_job['id']
-            
+            conn.close()
+            return True, dict(row)
+
     # 2. Match by clean URL
-    if not existing_id and clean_url:
+    if clean_url:
         cursor.execute("SELECT * FROM jobs WHERE job_url = ? OR job_url LIKE ?", (clean_url, f"%{clean_url}%"))
         row = cursor.fetchone()
         if row:
-            existing_job = dict(row)
-            existing_id = existing_job['id']
-            
+            conn.close()
+            return True, dict(row)
+
     # 3. Match by normalized company and title
-    if not existing_id and company and title:
+    if company and title:
         norm_c = normalize_company(company)
         norm_t = normalize_title(title)
         if norm_c and norm_t:
             cursor.execute("SELECT * FROM jobs")
             for r in cursor.fetchall():
                 if normalize_company(r['company']) == norm_c and normalize_title(r['title']) == norm_t:
-                    existing_job = dict(r)
-                    existing_id = existing_job['id']
-                    break
+                    existing = dict(r)
+                    conn.close()
+                    return True, existing
 
-    skills = job_data.get('skills', [])
-    skills_str = json.dumps(skills) if isinstance(skills, list) else str(skills)
+    conn.close()
+    return False, None
 
-    match_score = float(job_data.get('match_score', 0.0) or 0.0)
-    growth_score = float(job_data.get('growth_score', 0.0) or match_score)
-    growth_level = str(job_data.get('growth_level', ''))
-    growth_insights = str(job_data.get('growth_insights', ''))
+def save_job(job_data, only_if_new=False):
+    """
+    Saves a job with intelligent duplicate protection:
+    - If only_if_new=True: Do NOT add if the job is already present in the database. Returns None.
+    - If only_if_new=False: If present, merges fresh details without inserting duplicate rows.
+    """
+    title = job_data.get('title', 'Unknown Role')
+    company = job_data.get('company', 'Unknown Company')
+    job_url = job_data.get('job_url', '')
+    canonical_key = job_data.get('canonical_key') or compute_canonical_key(company, title, job_url)
 
-    if existing_id:
+    present, existing_job = is_job_present(job_data)
+
+    if present and existing_job:
+        if only_if_new:
+            # DO NOT ADD same duplicate job again if already present!
+            return None
+
         # MERGE: Preserve user status, notes, applied_date while enriching job data
+        existing_id = existing_job['id']
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        skills = job_data.get('skills', [])
+        skills_str = json.dumps(skills) if isinstance(skills, list) else str(skills)
+
+        match_score = float(job_data.get('match_score', 0.0) or 0.0)
+        growth_score = float(job_data.get('growth_score', 0.0) or match_score)
+        growth_level = str(job_data.get('growth_level', ''))
+        growth_insights = str(job_data.get('growth_insights', ''))
+
         merged_title = title if title and title != 'Unknown Role' else existing_job.get('title', title)
         merged_desc = job_data.get('description') or existing_job.get('description', '')
         merged_loc = job_data.get('location') or existing_job.get('location', '')
@@ -231,7 +257,18 @@ def save_job(job_data):
         conn.close()
         return existing_id
 
-    # INSERT new unique job
+    # INSERT new unique job (only when NOT present)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    skills = job_data.get('skills', [])
+    skills_str = json.dumps(skills) if isinstance(skills, list) else str(skills)
+
+    match_score = float(job_data.get('match_score', 0.0) or 0.0)
+    growth_score = float(job_data.get('growth_score', 0.0) or match_score)
+    growth_level = str(job_data.get('growth_level', ''))
+    growth_insights = str(job_data.get('growth_insights', ''))
+
     job_id = job_data.get('id') or str(uuid.uuid4())
     cursor.execute('''
         INSERT INTO jobs (
@@ -253,13 +290,37 @@ def save_job(job_data):
     conn.close()
     return job_id
 
-def save_jobs_batch(jobs_list):
+def save_jobs_batch(jobs_list, only_new=True):
+    """
+    Saves a batch of jobs. If only_new=True, strictly skips jobs that are already present.
+    Returns:
+    {
+        "saved_ids": list of new IDs,
+        "new_count": count of newly added jobs,
+        "skipped_count": count of duplicates skipped
+    }
+    """
     saved_ids = []
+    skipped_count = 0
     for job in jobs_list:
-        jid = save_job(job)
-        if jid not in saved_ids:
-            saved_ids.append(jid)
-    return saved_ids
+        if only_new:
+            present, _ = is_job_present(job)
+            if present:
+                skipped_count += 1
+                continue
+            jid = save_job(job, only_if_new=True)
+            if jid:
+                saved_ids.append(jid)
+        else:
+            jid = save_job(job, only_if_new=False)
+            if jid and jid not in saved_ids:
+                saved_ids.append(jid)
+
+    return {
+        "saved_ids": saved_ids,
+        "new_count": len(saved_ids),
+        "skipped_count": skipped_count
+    }
 
 def deduplicate_all_jobs():
     """

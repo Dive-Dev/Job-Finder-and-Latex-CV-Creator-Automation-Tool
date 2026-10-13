@@ -167,3 +167,10 @@ def analyze_jd(jd_text):
     fallback = heuristic_analyze_jd(jd_text)
     fallback["note"] = "Processed using built-in ATS heuristics (Local Model offline)."
     return fallback
+
+def extract_skills_heuristic(text):
+    """Convenience helper extracting skills from raw text using heuristic catalog."""
+    if not text:
+        return []
+    res = heuristic_analyze_jd(text)
+    return res.get("skills", [])

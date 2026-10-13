@@ -10,7 +10,7 @@ from sheets.local_db import (
     save_job, save_jobs_batch, get_all_jobs, get_job_by_id, 
     update_job_status, update_job_details, delete_job, delete_jobs_batch, get_stats,
     get_user_profile, save_user_profile, list_user_profiles, parse_raw_resume,
-    deduplicate_all_jobs,
+    deduplicate_all_jobs, is_job_present,
     save_contact, get_contacts, update_contact_status, delete_contact
 )
 from sheets.sheets_client import append_job_to_sheet, sync_all_jobs_to_sheet
@@ -18,6 +18,15 @@ from scraper.linkedin_scraper import scrape_linkedin_jobs, scrape_single_linkedi
 from scraper.google_scraper import search_jobs_google
 from scraper.company_scraper import find_company_career_site, find_multiple_company_career_sites, scrape_company_live_openings
 from scraper.recruiter_finder import search_company_contacts, predict_company_email_patterns
+from scraper.mcp_scraper import mcp_search_jobs, mcp_scrape_posting_details, mcp_scrape_company_openings
+from ai.coder_skill import (
+    solve_code_challenge, review_code, fix_latex_cv_syntax,
+    assess_tech_stack_alignment, generate_tech_interview_questions
+)
+from ai.job_skill import (
+    tailor_star_bullets, deep_jd_analysis, craft_recruiter_pitch,
+    generate_interview_prep_pack, evaluate_growth_trajectory
+)
 from ai.jd_analyzer import analyze_jd
 from ai.cv_tailor import calculate_ats_match, tailor_bullet_points, generate_cold_outreach
 from ai.referral_generator import generate_personalized_referral_outreach
@@ -31,7 +40,6 @@ from sheets.local_db import (
 )
 from scraper.people_intelligence import search_people_apollo_style, detect_domain_email_pattern
 from email_engine.mailer import send_referral_email, test_smtp_connection, get_smtp_config
-from ai.interview_prep import generate_interview_prep_pack
 from agent.agent_trainer import run_agent_training_cycle, load_training_profile
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
@@ -149,7 +157,101 @@ def api_get_stats():
     stats = get_stats()
     return jsonify({"success": True, "stats": stats})
 
-# --- SCRAPER APIS ---
+# --- SCRAPER APIS & FREE MCP ENGINE ---
+
+@app.route('/api/scrape/mcp', methods=['POST'])
+def api_scrape_mcp():
+    """
+    High-reliability free scraper powered by Model Context Protocol (MCP).
+    Fetches real, live tech job postings from verified public ATS boards (Greenhouse, Lever, etc.).
+    STRICT DEDUPLICATION: Existing jobs are NEVER added again.
+    """
+    data = request.json or {}
+    role = data.get('roles') or data.get('role') or data.get('query') or 'software engineer'
+    location = data.get('locations') or data.get('location') or ''
+    company = data.get('company', '').strip() or None
+    max_results = int(data.get('max_results', 15))
+    auto_save = data.get('auto_save', True)
+
+    try:
+        raw_jobs = mcp_search_jobs(
+            role_keyword=role,
+            location=location,
+            company=company,
+            max_results=max_results
+        )
+
+        profile = get_user_profile() or {}
+        processed_jobs = []
+        new_jobs = []
+        duplicates_skipped = 0
+
+        for job in raw_jobs:
+            match = calculate_ats_match(profile, job)
+            job['match_score'] = match['score']
+
+            already_present, existing = is_job_present(job)
+            if already_present:
+                duplicates_skipped += 1
+                job['is_duplicate'] = True
+                job['existing_id'] = existing.get('id') if existing else None
+            else:
+                job['is_duplicate'] = False
+                new_jobs.append(job)
+
+            processed_jobs.append(job)
+
+        saved_ids = []
+        if auto_save and new_jobs:
+            batch_res = save_jobs_batch(new_jobs, only_new=True)
+            saved_ids = batch_res.get('saved_ids', [])
+
+        return jsonify({
+            "success": True,
+            "jobs": processed_jobs,
+            "new_jobs": new_jobs,
+            "count": len(processed_jobs),
+            "new_count": len(new_jobs),
+            "duplicates_skipped": duplicates_skipped,
+            "saved": auto_save,
+            "engine": "JobPulse Free MCP ATS Engine"
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/scrape/mcp-url', methods=['POST'])
+def api_scrape_mcp_url():
+    """Extracts clean text and parsed skills from any job posting URL using Free MCP."""
+    data = request.json or {}
+    url = data.get('url', '').strip()
+    if not url:
+        return jsonify({"success": False, "error": "URL is required"}), 400
+    res = mcp_scrape_posting_details(url)
+    return jsonify(res)
+
+@app.route('/api/mcp/tools', methods=['GET'])
+def api_mcp_tools():
+    """Lists registered Free Model Context Protocol (MCP) servers and tools."""
+    return jsonify({
+        "success": True,
+        "servers": [
+            {
+                "name": "jobpulse-mcp-scraper",
+                "status": "Active (Free)",
+                "description": "Zero-cost MCP tool server directly querying official ATS feeds (Greenhouse, Lever) without rate limits or bot blocking.",
+                "tools": [
+                    {"name": "search_live_jobs", "purpose": "Search verified live job openings across top tech companies."},
+                    {"name": "scrape_ats_jobs", "purpose": "Query company career boards directly via public ATS endpoints."},
+                    {"name": "scrape_job_url", "purpose": "Extract clean job requirements and structured skills from any URL."}
+                ]
+            },
+            {
+                "name": "jobpulse-sqlite",
+                "status": "Active (Local)",
+                "description": "Direct MCP SQLite connection for jobs.db storage and zero-duplicate integrity."
+            }
+        ]
+    })
 
 @app.route('/api/scrape/linkedin', methods=['POST'])
 def api_scrape_linkedin():
@@ -178,18 +280,32 @@ def api_scrape_linkedin():
             cookie=cookie
         )
         
-        # Calculate initial match scores against user profile
+        # Calculate initial match scores & strictly filter duplicates
         profile = get_user_profile() or {}
+        new_jobs = []
+        duplicates_skipped = 0
+
         for job in jobs:
             match = calculate_ats_match(profile, job)
             job['match_score'] = match['score']
-            if auto_save:
-                save_job(job)
+            already_present, _ = is_job_present(job)
+            if already_present:
+                duplicates_skipped += 1
+                job['is_duplicate'] = True
+            else:
+                job['is_duplicate'] = False
+                new_jobs.append(job)
+
+        if auto_save and new_jobs:
+            save_jobs_batch(new_jobs, only_new=True)
 
         return jsonify({
             "success": True,
             "jobs": jobs,
+            "new_jobs": new_jobs,
             "count": len(jobs),
+            "new_count": len(new_jobs),
+            "duplicates_skipped": duplicates_skipped,
             "saved": auto_save,
             "parsed_url": parsed_meta
         })
@@ -216,16 +332,30 @@ def api_scrape_google():
     try:
         results = search_jobs_google(role, location=location, preferences=preferences, max_results=max_results)
         profile = get_user_profile() or {}
+        new_jobs = []
+        duplicates_skipped = 0
+
         for job in results:
             match = calculate_ats_match(profile, job)
             job['match_score'] = match['score']
-            if auto_save:
-                save_job(job)
+            already_present, _ = is_job_present(job)
+            if already_present:
+                duplicates_skipped += 1
+                job['is_duplicate'] = True
+            else:
+                job['is_duplicate'] = False
+                new_jobs.append(job)
+
+        if auto_save and new_jobs:
+            save_jobs_batch(new_jobs, only_new=True)
 
         return jsonify({
             "success": True,
             "jobs": results,
+            "new_jobs": new_jobs,
             "count": len(results),
+            "new_count": len(new_jobs),
+            "duplicates_skipped": duplicates_skipped,
             "saved": auto_save
         })
     except Exception as e:
@@ -245,34 +375,57 @@ def api_scrape_company():
         return jsonify({"success": False, "error": "Company name required"}), 400
 
     try:
-        # Scrape real, live job openings for the company/companies
-        result = scrape_company_live_openings(
-            companies_input=company_input,
-            role_keywords=role,
-            location=location,
-            max_per_company=max_per_company
-        )
+        # First try Free MCP ATS opening scraper
+        jobs = []
+        try:
+            jobs = mcp_scrape_company_openings(company_input, role_keywords=role, location=location, max_results=max_per_company)
+        except Exception:
+            jobs = []
 
-        jobs = result.get('jobs', [])
+        # If MCP has results, use them, otherwise fallback to company_scraper
+        result = {}
+        if not jobs:
+            result = scrape_company_live_openings(
+                companies_input=company_input,
+                role_keywords=role,
+                location=location,
+                max_per_company=max_per_company
+            )
+            jobs = result.get('jobs', [])
+
         profile = get_user_profile() or {}
+        new_jobs = []
+        duplicates_skipped = 0
 
-        # Calculate ATS compatibility match score for each job
         for job in jobs:
             match = calculate_ats_match(profile, job)
             job['match_score'] = match['score']
-            if auto_save:
-                save_job(job)
+            already_present, _ = is_job_present(job)
+            if already_present:
+                duplicates_skipped += 1
+                job['is_duplicate'] = True
+            else:
+                job['is_duplicate'] = False
+                new_jobs.append(job)
+
+        if auto_save and new_jobs:
+            save_jobs_batch(new_jobs, only_new=True)
 
         return jsonify({
             "success": True,
             "jobs": jobs,
+            "new_jobs": new_jobs,
             "count": len(jobs),
-            "companies": result.get('companies', []),
+            "new_count": len(new_jobs),
+            "duplicates_skipped": duplicates_skipped,
+            "companies": result.get('companies', [company_input]),
             "company_info": result.get('company_info', {}),
-            "saved": auto_save
+            "saved": auto_save,
+            "mcp_powered": True
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 # --- CONTACTS & REFERRAL APIS ---
 
@@ -403,6 +556,103 @@ def api_tailor_cv():
         "match": match,
         "latex_result": latex_result
     })
+
+# --- CODER SKILL API ---
+
+@app.route('/api/ai/coder-skill', methods=['POST'])
+def api_coder_skill():
+    """
+    Executes specialized coding challenges, code reviews, LaTeX CV syntax repairs,
+    tech stack alignment, and engineering interview question generation.
+    """
+    data = request.json or {}
+    action = data.get('action', 'solve_challenge')
+    
+    try:
+        if action == 'solve_challenge':
+            challenge = data.get('challenge', '')
+            language = data.get('language', 'python')
+            res = solve_code_challenge(challenge, language=language)
+            return jsonify({"success": True, "result": res})
+            
+        elif action == 'review_code':
+            code = data.get('code', '')
+            language = data.get('language', 'python')
+            context = data.get('context', '')
+            res = review_code(code, language=language, context=context)
+            return jsonify({"success": True, "result": res})
+            
+        elif action == 'fix_latex':
+            latex_code = data.get('latex_code', '')
+            error_log = data.get('error_log', '')
+            res = fix_latex_cv_syntax(latex_code, error_log=error_log)
+            return jsonify({"success": True, "result": res})
+            
+        elif action == 'assess_stack':
+            profile = data.get('profile') or get_user_profile() or {}
+            required_stack = data.get('required_stack', [])
+            res = assess_tech_stack_alignment(profile, required_stack)
+            return jsonify({"success": True, "result": res})
+            
+        elif action == 'tech_questions':
+            role_title = data.get('role_title', 'Software Engineer')
+            tech_stack = data.get('tech_stack', [])
+            seniority = data.get('seniority', 'Mid-Level')
+            res = generate_tech_interview_questions(role_title, tech_stack=tech_stack, seniority=seniority)
+            return jsonify({"success": True, "result": res})
+            
+        else:
+            return jsonify({"success": False, "error": f"Unknown action '{action}'"}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# --- JOB SKILL API ---
+
+@app.route('/api/ai/job-skill', methods=['POST'])
+def api_job_skill():
+    """
+    Executes deep JD breakdown, Google XYZ STAR bullet tailoring, recruiter pitch crafting,
+    interview preparation studio packs, and career growth evaluation.
+    """
+    data = request.json or {}
+    action = data.get('action', 'star_bullets')
+    
+    try:
+        if action == 'star_bullets':
+            experience = data.get('experience', {})
+            target_role = data.get('target_role', 'Software Engineer')
+            key_skills = data.get('key_skills', [])
+            res = tailor_star_bullets(experience, target_role=target_role, key_skills=key_skills)
+            return jsonify({"success": True, "result": res})
+            
+        elif action == 'deep_jd':
+            jd_text = data.get('jd_text', '')
+            res = deep_jd_analysis(jd_text)
+            return jsonify({"success": True, "result": res})
+            
+        elif action == 'recruiter_pitch':
+            profile = data.get('profile') or get_user_profile() or {}
+            job_data = data.get('job_data', {})
+            pitch_style = data.get('pitch_style', 'balanced')
+            res = craft_recruiter_pitch(profile, job_data=job_data, pitch_style=pitch_style)
+            return jsonify({"success": True, "result": res})
+            
+        elif action == 'prep_pack':
+            profile = data.get('profile') or get_user_profile() or {}
+            job_data = data.get('job_data', {})
+            res = generate_interview_prep_pack(profile, job_data=job_data)
+            return jsonify({"success": True, "result": res})
+            
+        elif action == 'growth_eval':
+            job_data = data.get('job_data', {})
+            res = evaluate_growth_trajectory(job_data)
+            return jsonify({"success": True, "result": res})
+            
+        else:
+            return jsonify({"success": False, "error": f"Unknown action '{action}'"}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # --- PROFILE API ---
 

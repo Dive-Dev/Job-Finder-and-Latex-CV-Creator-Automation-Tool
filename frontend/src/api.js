@@ -13,10 +13,17 @@ export const api = {
   deleteJob: (id) => axios.delete(`${API_BASE}/jobs/${id}`).then(res => res.data),
   deleteJobsBatch: (job_ids) => axios.post(`${API_BASE}/jobs/batch-delete`, { job_ids }).then(res => res.data),
 
-  // Scrapers
+  // Scrapers & Free MCP Engine
+  scrapeMcp: (payload) => axios.post(`${API_BASE}/scrape/mcp`, payload).then(res => res.data),
+  scrapeMcpUrl: (payload) => axios.post(`${API_BASE}/scrape/mcp-url`, payload).then(res => res.data),
+  getMcpTools: () => axios.get(`${API_BASE}/mcp/tools`).then(res => res.data),
   scrapeLinkedIn: (payload) => axios.post(`${API_BASE}/scrape/linkedin`, payload).then(res => res.data),
   scrapeGoogle: (payload) => axios.post(`${API_BASE}/scrape/google`, payload).then(res => res.data),
   scrapeCompany: (payload) => axios.post(`${API_BASE}/scrape/company`, payload).then(res => res.data),
+
+  // Coder Skill & Job Skill AI Suite
+  runCoderSkill: (payload) => axios.post(`${API_BASE}/ai/coder-skill`, payload).then(res => res.data),
+  runJobSkill: (payload) => axios.post(`${API_BASE}/ai/job-skill`, payload).then(res => res.data),
 
   // Contacts & Outreach
   getContacts: (company) => axios.get(`${API_BASE}/contacts`, { params: { company } }).then(res => res.data),

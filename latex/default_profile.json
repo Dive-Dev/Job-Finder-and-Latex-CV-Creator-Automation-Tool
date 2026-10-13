@@ -1,76 +1,180 @@
 {
-  "name": "Alex Morgan",
-  "title": "Senior Full-Stack & Systems Engineer",
-  "email": "alex.morgan@email.com",
-  "phone": "+1 (555) 234-5678",
-  "location": "San Francisco, CA",
-  "linkedin": "linkedin.com/in/alexmorgan-dev",
-  "github": "github.com/alexmorgan",
-  "portfolio": "alexmorgan.dev",
-  "summary": "Results-oriented Software Engineer with 5+ years of experience building high-throughput distributed systems, scalable web applications, and resilient cloud architectures.",
+  "name": "Divesh S",
+  "title": "Software Engineer / Backend Developer",
+  "email": "diveshswork@gmail.com",
+  "phone": "+91 8884986140",
+  "location": "Bengaluru, Karnataka",
+  "target_locations": [
+    "Bengaluru",
+    "Hyderabad",
+    "Remote"
+  ],
+  "linkedin": "linkedin.com/in/diveshswork",
+  "github": "github.com/Dive-Dev",
+  "portfolio": "",
+  "target_roles": [
+    "Software Engineer",
+    "Backend Developer",
+    "SDE-1",
+    "Python Developer",
+    "API Integration Engineer"
+  ],
+  "target_salary": "\u20b99 LPA+ (Min: \u20b99-10 LPA, Practical: \u20b911-14 LPA, Ambitious: \u20b915-18 LPA, Stretch: \u20b920-25 LPA)",
+  "summary": "Software Engineer with experience across full-stack development, enterprise SaaS, backend APIs, automation, and production systems. Skilled in Python, JavaScript, SQL, React.js, Node.js, REST APIs, and cloud technologies, with hands-on experience in system troubleshooting, workflow automation, AI applications, and web development. Currently an Analyst at Kapture CX, supporting enterprise SaaS workflows and API-driven production processes. Seeking Software Engineer / Backend Engineer roles.",
   "education": [
     {
-      "degree": "B.S. in Computer Science",
-      "institution": "University of California, Berkeley",
-      "location": "Berkeley, CA",
-      "dates": "2018 - 2022",
-      "gpa": "3.85 / 4.0",
-      "details": "Dean's Honor List, Coursework: Distributed Systems, Operating Systems, Algorithms"
+      "degree": "MCA",
+      "institution": "R V Institute of Technology & Management, Bengaluru",
+      "location": "Bengaluru",
+      "dates": "2023 - 2025"
+    },
+    {
+      "degree": "BCA",
+      "institution": "Alva's College, Moodabidri",
+      "location": "Moodabidri",
+      "dates": "2020 - 2023"
     }
   ],
+  "skills": {
+    "Languages": [
+      "Python",
+      "JavaScript",
+      "SQL",
+      "C++"
+    ],
+    "Backend": [
+      "Node.js",
+      "REST APIs",
+      "MySQL"
+    ],
+    "Frontend": [
+      "React.js",
+      "HTML",
+      "CSS",
+      "Bootstrap"
+    ],
+    "Cloud & DevOps": [
+      "AWS",
+      "Docker",
+      "Git",
+      "CI/CD"
+    ],
+    "AI": [
+      "Generative AI",
+      "AI Agents",
+      "NLP",
+      "Automation"
+    ],
+    "Tools": [
+      "Postman",
+      "GitHub",
+      "VS Code",
+      "Streamlit"
+    ],
+    "Other": [
+      "Solidity",
+      "Web3.js",
+      "Smart Contracts"
+    ]
+  },
   "experience": [
     {
-      "company": "CloudScale Technologies",
-      "role": "Senior Software Engineer",
-      "location": "San Francisco, CA",
-      "dates": "2023 - Present",
+      "company": "Kapture CX",
+      "role": "Analyst",
+      "location": "Bengaluru, Karnataka",
+      "dates": "Aug 2026 - Present",
       "bullets": [
-        "Architected and deployed high-performance microservices handling 25,000+ requests/sec using Python, Go, and Redis.",
-        "Reduced p99 API latency by 42% through optimized PostgreSQL indexing, query rewriting, and asynchronous task queues.",
-        "Spearheaded cloud migration to AWS EKS with Terraform, cutting monthly infrastructure spend by $18,000.",
-        "Mentored 4 junior engineers on clean architecture, comprehensive unit testing, and automated CI/CD deployment pipelines."
+        "Support enterprise SaaS workflows involving APIs, system processes, automation, and production operations.",
+        "Analyze system behavior and troubleshoot production issues across API-driven workflows and platform processes.",
+        "Collaborate with cross-functional teams on technical escalations, workflow improvements, and issue resolution."
       ]
     },
     {
-      "company": "Apex Fintech Solutions",
-      "role": "Software Engineer",
-      "location": "San Jose, CA",
-      "dates": "2022 - 2023",
+      "company": "Kapture CX",
+      "role": "Management Trainee",
+      "location": "Bengaluru, Karnataka",
+      "dates": "May 2026 - Jul 2026",
       "bullets": [
-        "Developed full-stack responsive web dashboard using React, TypeScript, and FastAPI serving 120,000 active monthly users.",
-        "Integrated real-time financial transaction processing using Apache Kafka and automated fraud anomaly detection models.",
-        "Achieved 99.98% platform uptime by implementing distributed tracing and proactive alerting with Prometheus and Grafana."
+        "Supported enterprise SaaS workflows, automation initiatives, API processes, system troubleshooting, and production operations."
+      ]
+    },
+    {
+      "company": "Eshwari Biztech",
+      "role": "IT Systems & Solutions Integration Trainee",
+      "location": "India",
+      "dates": "Oct 2025 - Feb 2026",
+      "bullets": [
+        "Assisted with IT infrastructure setup, system integration, deployment, configuration, and technical troubleshooting."
+      ]
+    },
+    {
+      "company": "Vide Digital Technologies",
+      "role": "Founder | Digital & Technology Solutions",
+      "location": "Bengaluru, Karnataka",
+      "dates": "Feb 2024 - Oct 2024",
+      "bullets": [
+        "Built and delivered web-based solutions, websites, and digital platforms based on client requirements.",
+        "Managed end-to-end project execution including development, deployment, and technical delivery."
+      ]
+    },
+    {
+      "company": "DigiDxDoc",
+      "role": "Frontend Developer Intern",
+      "location": "Bengaluru, Karnataka",
+      "dates": "Nov 2024 - Jan 2025",
+      "bullets": [
+        "Built reusable React.js/Bootstrap interfaces and integrated REST APIs with asynchronous data flows.",
+        "Contributed to feature development, debugging, UI improvements, and Agile development."
+      ]
+    },
+    {
+      "company": "[24]7.ai (Best Buy Canada)",
+      "role": "Digital Interaction Advisor",
+      "location": "India",
+      "dates": "Oct 2023 - Jan 2024",
+      "bullets": [
+        "Provided digital customer support using CRM and AI-driven platforms in a high-volume environment.",
+        "Resolved customer issues through structured workflows, system-based troubleshooting, and process-driven analysis."
       ]
     }
   ],
   "projects": [
     {
-      "name": "JobPulse AI & CV Generator",
-      "technologies": "Python, Flask, Google Gemini AI, SQLite, LaTeX",
-      "link": "github.com/alexmorgan/jobpulse",
+      "name": "Adaptive AI Learning System",
+      "technologies": "AI/ML, Python",
+      "link": "Smart India Hackathon Finalist",
       "bullets": [
-        "Created an end-to-end automated job hunting engine scraping LinkedIn and Google ATS postings with instant company portal discovery.",
-        "Engineered an ATS resume matching engine analyzing job descriptions and generating job-tailored LaTeX CVs with 95%+ keyword alignment."
+        "Developed an AI/ML solution analyzing student performance to generate personalized learning paths."
       ]
     },
     {
-      "name": "Distributed Key-Value Store",
-      "technologies": "Go, Raft Consensus, gRPC, Docker",
-      "link": "github.com/alexmorgan/distributed-kv",
+      "name": "Edu.Dev Marketplace",
+      "technologies": "React.js, Smart Contracts, Web3",
+      "link": "Spheron Web3 DAppthon Winner",
       "bullets": [
-        "Implemented linearizable Raft consensus algorithm supporting leader election, log replication, and automated cluster membership changes.",
-        "Benchmarked throughput exceeding 60,000 writes/sec across 5-node cluster using custom gRPC client pool."
+        "Built a decentralized learning marketplace using React.js, smart contracts, and Web3 technologies with token-gated content."
+      ]
+    },
+    {
+      "name": "Decentralized Crowdfunding Platform",
+      "technologies": "Solidity, React, Web3.js, MetaMask",
+      "link": "github.com/Dive-Dev",
+      "bullets": [
+        "Developed a Solidity/React/Web3.js DApp with smart-contract-based fund distribution, refunds, and MetaMask integration."
       ]
     }
   ],
-  "skills": {
-    "Languages": ["Python", "JavaScript", "TypeScript", "Go", "SQL", "C++", "HTML/CSS"],
-    "Frameworks & Libraries": ["React", "Next.js", "Node.js", "FastAPI", "Flask", "Django", "Tailwind CSS"],
-    "Cloud & DevOps": ["AWS (EC2, S3, RDS, Lambda, EKS)", "Docker", "Kubernetes", "Terraform", "GitHub Actions", "CI/CD"],
-    "Databases & Tools": ["PostgreSQL", "MySQL", "MongoDB", "Redis", "Kafka", "Git", "Linux", "GraphQL"]
-  },
+  "achievements": [
+    "Director, The Phoenix Guild Karnataka (Aug 2024--Present): Lead technical community activities and organize developer workshops on emerging technologies.",
+    "Smart India Hackathon Finalist (Top 5 / 4,600 teams, 2024)",
+    "Spheron Web3 DAppthon Winner (2024)",
+    "WeSign Wizard Competition Winner (2023)"
+  ],
   "certifications": [
-    "AWS Certified Solutions Architect – Associate",
-    "Certified Kubernetes Administrator (CKA)"
+    "Google IT Automation with Python",
+    "Develop GenAI Apps with Gemini and Streamlit",
+    "Introduction to Generative AI",
+    "Getting Started with AI Agents",
+    "C++ Data Structures and Algorithms"
   ]
 }

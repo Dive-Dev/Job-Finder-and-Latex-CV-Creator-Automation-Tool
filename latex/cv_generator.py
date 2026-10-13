@@ -175,6 +175,12 @@ def generate_latex_cv(profile=None, job_data=None, output_filename=None, filenam
         cert_items = "\n".join([f"    \\resumeItem{{{escape_latex(c)}}}" for c in certs])
         cert_section = f"%-----------CERTIFICATIONS-----------\n\\section{{Certifications}}\n  \\resumeItemListStart\n{cert_items}\n  \\resumeItemListEnd\n"
 
+    achievements = profile.get('achievements', [])
+    achievements_section = ""
+    if achievements:
+        ach_items = "\n".join([f"    \\resumeItem{{{escape_latex(a)}}}" for a in achievements])
+        achievements_section = f"%-----------ACHIEVEMENTS-----------\n\\section{{Achievements \\& Leadership}}\n  \\resumeItemListStart\n{ach_items}\n  \\resumeItemListEnd\n"
+
     content = template
     replacements = {
         "(( CANDIDATE_NAME ))": name,
@@ -189,6 +195,7 @@ def generate_latex_cv(profile=None, job_data=None, output_filename=None, filenam
         "(( EXPERIENCE_ITEMS ))": exp_items,
         "(( PROJECT_ITEMS ))": proj_items,
         "(( SKILLS_ITEMS ))": skills_items,
+        "(( ACHIEVEMENTS_SECTION ))": achievements_section,
         "(( CERTIFICATIONS_SECTION ))": cert_section,
     }
 
