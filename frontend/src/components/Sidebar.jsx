@@ -31,6 +31,7 @@ import {
   FiUsers,
   FiSliders,
   FiMenu,
+  FiUser,
   FiChevronLeft,
   FiChevronRight,
   FiRefreshCw
@@ -62,8 +63,9 @@ export const navWorkspaces = [
     ]
   },
   {
-    group: 'Network & System',
+    group: 'Candidate & System',
     items: [
+      { id: 'profile', label: 'Candidate Profile', icon: FiUser, isNew: true },
       { id: 'contacts', label: 'People & Referrals', icon: FiUsers },
       { id: 'settings', label: 'System Settings', icon: FiSliders },
     ]

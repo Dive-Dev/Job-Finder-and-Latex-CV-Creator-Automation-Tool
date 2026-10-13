@@ -37,9 +37,12 @@ import {
   FiSearch,
   FiEye,
   FiAward,
+  FiCopy,
+  FiTrendingUp,
 } from 'react-icons/fi'
 import { api } from '../api'
 import JobDetailDrawer from './JobDetailDrawer'
+import { matchComplexJobQuery } from '../utils/queryParser'
 
 export default function PipelineTab({
   jobs = [],
@@ -52,7 +55,8 @@ export default function PipelineTab({
   const toast = useToast()
   const [viewMode, setViewMode] = useState('sheets') // 'sheets' | 'kanban'
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('All')
+  const [growthFilter, setGrowthFilter] = useState('All')
+  const [deduplicating, setDeduplicating] = useState(false)
   const [selectedIds, setSelectedIds] = useState(new Set())
 
   // Job Detail Drawer State
@@ -76,16 +80,32 @@ export default function PipelineTab({
     rejected: safeJobs.filter((j) => j.status === 'Rejected').length,
   }
 
+  const handleDeduplicatePipeline = async () => {
+    setDeduplicating(true)
+    try {
+      const res = await api.deduplicateJobs()
+      if (res.success) {
+        toast({
+          title: 'Deduplication Complete!',
+          description: `Cleaned up ${res.removed_duplicates_count} duplicate listings across ${res.merged_clusters_count} company roles.`,
+          status: 'success',
+          duration: 3500,
+        })
+        if (refreshJobs) refreshJobs()
+      }
+    } catch (err) {
+      toast({ title: 'Deduplication Error', description: err.message, status: 'error' })
+    } finally {
+      setDeduplicating(false)
+    }
+  }
+
   const filteredJobs = safeJobs.filter((j) => {
     const status = j.status || 'Wishlist'
     const matchesStatus = statusFilter === 'All' || status === statusFilter
-    const q = searchQuery.toLowerCase().trim()
-    const matchesSearch =
-      !q ||
-      (j.title || '').toLowerCase().includes(q) ||
-      (j.company || '').toLowerCase().includes(q) ||
-      (j.location || '').toLowerCase().includes(q)
-    return matchesStatus && matchesSearch
+    const matchesGrowth = growthFilter === 'All' || (j.growth_level || '').toLowerCase().includes(growthFilter.toLowerCase())
+    const matchesQuery = matchComplexJobQuery(j, searchQuery)
+    return matchesStatus && matchesGrowth && matchesQuery
   })
 
   const toggleSelect = (id, e) => {
@@ -200,7 +220,7 @@ export default function PipelineTab({
               <Box position="relative" flex={1}>
                 <Input
                   size="sm"
-                  placeholder="🔍 Search role, company, or location..."
+                  placeholder="🔍 Complex search: role, company:Amazon, skill:Python, min_score:80, AND / OR..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -208,7 +228,7 @@ export default function PipelineTab({
 
               <Select
                 size="sm"
-                maxW={{ base: 'full', sm: '180px' }}
+                maxW={{ base: 'full', sm: '150px' }}
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
@@ -219,6 +239,34 @@ export default function PipelineTab({
                 <option value="Offer">Offers ({metrics.offer})</option>
                 <option value="Rejected">Rejected ({metrics.rejected})</option>
               </Select>
+
+              <Select
+                size="sm"
+                maxW={{ base: 'full', sm: '160px' }}
+                value={growthFilter}
+                onChange={(e) => setGrowthFilter(e.target.value)}
+              >
+                <option value="All">Growth: All</option>
+                <option value="Target Fit">Target Fit</option>
+                <option value="Stretch">Stretch / Growth</option>
+                <option value="Leadership">Leadership</option>
+                <option value="Foundation">Foundation</option>
+              </Select>
+
+              <Button
+                size="sm"
+                variant="outline"
+                borderColor="rgba(248, 111, 3, 0.35)"
+                color="#F86F03"
+                _hover={{ bg: 'rgba(248, 111, 3, 0.12)' }}
+                leftIcon={<FiCopy />}
+                onClick={handleDeduplicatePipeline}
+                isLoading={deduplicating}
+                fontSize="2xs"
+                title="Detect and merge duplicate job postings in pipeline"
+              >
+                Clean Duplicates
+              </Button>
             </Flex>
 
             {/* View Switcher: Sheets Grid vs Kanban */}
@@ -325,18 +373,31 @@ export default function PipelineTab({
                             />
                           </Td>
 
-                          {/* Match Score Badge */}
+                          {/* Match Score & Growth Badge */}
                           <Td>
-                            <Badge
-                              bg={score >= 80 ? 'rgba(16, 185, 129, 0.2)' : score >= 70 ? 'rgba(82, 95, 225, 0.2)' : 'rgba(255, 164, 27, 0.2)'}
-                              color={score >= 80 ? '#10b981' : score >= 70 ? '#8f98f3' : '#FFA41B'}
-                              border="1px solid"
-                              borderColor={score >= 80 ? 'rgba(16, 185, 129, 0.4)' : score >= 70 ? 'rgba(82, 95, 225, 0.4)' : 'rgba(255, 164, 27, 0.4)'}
-                              fontSize="xs"
-                              fontWeight="800"
-                            >
-                              {score}%
-                            </Badge>
+                            <VStack align="start" spacing={1}>
+                              <Badge
+                                bg={score >= 80 ? 'rgba(16, 185, 129, 0.2)' : score >= 70 ? 'rgba(82, 95, 225, 0.2)' : 'rgba(255, 164, 27, 0.2)'}
+                                color={score >= 80 ? '#10b981' : score >= 70 ? '#8f98f3' : '#FFA41B'}
+                                border="1px solid"
+                                borderColor={score >= 80 ? 'rgba(16, 185, 129, 0.4)' : score >= 70 ? 'rgba(82, 95, 225, 0.4)' : 'rgba(255, 164, 27, 0.4)'}
+                                fontSize="xs"
+                                fontWeight="800"
+                              >
+                                {score}%
+                              </Badge>
+                              {j.growth_level && (
+                                <Badge
+                                  bg={j.growth_level.includes('Stretch') ? 'rgba(248, 111, 3, 0.16)' : j.growth_level.includes('Leadership') ? 'rgba(82, 95, 225, 0.2)' : 'rgba(16, 185, 129, 0.14)'}
+                                  color={j.growth_level.includes('Stretch') ? '#F86F03' : j.growth_level.includes('Leadership') ? '#8f98f3' : '#10b981'}
+                                  fontSize="3xs"
+                                  px={1}
+                                  borderRadius="xs"
+                                >
+                                  {j.growth_level}
+                                </Badge>
+                              )}
+                            </VStack>
                           </Td>
 
                           {/* Title & Type */}

@@ -36,7 +36,7 @@ import {
 } from 'react-icons/fi'
 import { api } from '../api'
 
-export default function DiscoveryTab({ refreshJobs, onSelectJobForCv, onSelectJobForCoverLetter, onFindHrForCompany }) {
+export default function DiscoveryTab({ userProfile, refreshJobs, onSelectJobForCv, onSelectJobForCoverLetter, onFindHrForCompany }) {
   const toast = useToast()
 
   // LinkedIn Search state
@@ -44,11 +44,30 @@ export default function DiscoveryTab({ refreshJobs, onSelectJobForCv, onSelectJo
   const [linkedinMax, setLinkedinMax] = useState('15')
   const [loadingLinkedin, setLoadingLinkedin] = useState(false)
 
+  // Auto-personalize from User Profile
+  const defaultRoles = userProfile?.target_roles?.length
+    ? (Array.isArray(userProfile.target_roles) ? userProfile.target_roles.join(', ') : userProfile.target_roles)
+    : (userProfile?.title || 'Full Stack Developer, Python Developer, Software Engineer')
+  const defaultLoc = userProfile?.location || 'Bengaluru, Karnataka, India'
+
   // Google Search state
-  const [googleRole, setGoogleRole] = useState('Full Stack Developer, Python Developer, Software Engineer')
-  const [googleLocation, setGoogleLocation] = useState('Bengaluru, Karnataka, India')
+  const [googleRole, setGoogleRole] = useState(defaultRoles)
+  const [googleLocation, setGoogleLocation] = useState(defaultLoc)
   const [googleMax, setGoogleMax] = useState('15')
   const [loadingGoogle, setLoadingGoogle] = useState(false)
+
+  // Synchronize when user switches profile
+  React.useEffect(() => {
+    if (userProfile?.title) {
+      const roles = userProfile.target_roles?.length
+        ? (Array.isArray(userProfile.target_roles) ? userProfile.target_roles.join(', ') : userProfile.target_roles)
+        : userProfile.title
+      setGoogleRole(roles)
+    }
+    if (userProfile?.location) {
+      setGoogleLocation(userProfile.location)
+    }
+  }, [userProfile])
 
   // Streamed Results
   const [discoveredJobs, setDiscoveredJobs] = useState([])

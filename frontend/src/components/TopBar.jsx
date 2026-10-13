@@ -23,6 +23,7 @@ import {
   FiZap,
   FiUsers,
   FiSliders,
+  FiUser,
 } from 'react-icons/fi'
 import { api } from '../api'
 
@@ -37,12 +38,15 @@ const TAB_META = {
   prep: { title: 'Interview & Tech Prep', icon: FiAward, badge: 'AI COACH' },
   contacts: { title: 'People & Referrals', icon: FiUsers, badge: 'HUNTER / APOLLO' },
   ai: { title: 'AI JD Inspector', icon: FiZap, badge: 'ANALYSIS' },
+  profile: { title: 'Candidate Profile & AI Persona', icon: FiUser, badge: 'CAREER BLUEPRINT' },
   settings: { title: 'System Settings', icon: FiSliders, badge: 'CONFIG' },
 }
 
 export default function TopBar({
   activeTab,
   onOpenAddJob,
+  currentUser,
+  onOpenLogin,
 }) {
   const toast = useToast()
   const [syncing, setSyncing] = useState(false)
@@ -134,6 +138,23 @@ export default function TopBar({
             <Box w="6px" h="6px" borderRadius="full" bg="#FFA41B" boxShadow="0 0 6px #FFA41B" />
             <Text fontSize="3xs" color="#FFF6F4" opacity={0.8} fontWeight="600">Local LLM Online</Text>
           </HStack>
+
+          {/* Candidate Identity / Simple Login Pill */}
+          <Button
+            size="xs"
+            variant="ghost"
+            border="1px solid rgba(82, 95, 225, 0.35)"
+            bg="rgba(82, 95, 225, 0.12)"
+            color="#FFF6F4"
+            _hover={{ bg: 'rgba(82, 95, 225, 0.25)', borderColor: '#525FE1' }}
+            leftIcon={<FiUser color="#8f98f3" />}
+            onClick={onOpenLogin}
+            fontSize="3xs"
+            px={2.5}
+            title="Candidate Identity - Click to switch profile or log in"
+          >
+            {currentUser?.name || 'Alex Morgan'}
+          </Button>
 
           {/* Sync Sheets Button */}
           <Button

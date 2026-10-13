@@ -24,8 +24,10 @@ import InterviewPrepTab from './components/InterviewPrepTab'
 import ContactsTab from './components/ContactsTab'
 import AiInspectorTab from './components/AiInspectorTab'
 import SettingsTab from './components/SettingsTab'
+import ProfileTab from './components/ProfileTab'
 import NewJobModal from './components/NewJobModal'
 import OutreachModal from './components/OutreachModal'
+import LoginModal from './components/LoginModal'
 
 export default function App() {
   const toast = useToast()
@@ -70,6 +72,12 @@ export default function App() {
     isOpen: isOutreachOpen,
     onOpen: onOpenOutreach,
     onClose: onCloseOutreach,
+  } = useDisclosure()
+
+  const {
+    isOpen: isLoginOpen,
+    onOpen: onOpenLogin,
+    onClose: onCloseLogin,
   } = useDisclosure()
 
   // Load Initial Data
@@ -176,6 +184,8 @@ export default function App() {
         <TopBar
           activeTab={activeTab}
           onOpenAddJob={onOpenAddJob}
+          currentUser={profile}
+          onOpenLogin={onOpenLogin}
         />
 
         {/* Main Content Area - Supports Both Horizontal and Vertical Scrollbars Whenever Needed */}
@@ -201,6 +211,7 @@ export default function App() {
 
               {activeTab === 'discovery' && (
                 <DiscoveryTab
+                  userProfile={profile}
                   refreshJobs={refreshAll}
                   onSelectJobForCv={handleSelectJobForCv}
                   onSelectJobForCoverLetter={handleSelectJobForCoverLetter}
@@ -271,6 +282,18 @@ export default function App() {
 
               {activeTab === 'ai' && (
                 <AiInspectorTab jobs={jobs} />
+              )}
+
+              {activeTab === 'profile' && (
+                <ProfileTab
+                  onProfileUpdated={(updated) => {
+                    setProfile(updated)
+                    refreshAll()
+                  }}
+                  onNavigateDiscovery={(query) => {
+                    setActiveTab('discovery')
+                  }}
+                />
               )}
 
               {activeTab === 'settings' && (
@@ -346,6 +369,16 @@ export default function App() {
       onClose={onCloseOutreach}
       contact={outreachContact}
       profile={profile}
+    />
+
+    <LoginModal
+      isOpen={isLoginOpen}
+      onClose={onCloseLogin}
+      currentUser={profile}
+      onLoginSuccess={(newProfile) => {
+        setProfile(newProfile)
+        refreshAll()
+      }}
     />
   </Flex>
 )

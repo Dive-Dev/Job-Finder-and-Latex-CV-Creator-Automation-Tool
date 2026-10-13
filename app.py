@@ -9,7 +9,8 @@ load_dotenv()
 from sheets.local_db import (
     save_job, save_jobs_batch, get_all_jobs, get_job_by_id, 
     update_job_status, update_job_details, delete_job, delete_jobs_batch, get_stats,
-    get_user_profile, save_user_profile,
+    get_user_profile, save_user_profile, list_user_profiles, parse_raw_resume,
+    deduplicate_all_jobs,
     save_contact, get_contacts, update_contact_status, delete_contact
 )
 from sheets.sheets_client import append_job_to_sheet, sync_all_jobs_to_sheet
@@ -70,8 +71,16 @@ def serve_frontend_assets(path):
 def api_get_jobs():
     status = request.args.get('status')
     search = request.args.get('search')
-    jobs = get_all_jobs(status=status, search=search)
+    growth_level = request.args.get('growth_level')
+    min_score = request.args.get('min_score')
+    sort_by = request.args.get('sort_by')
+    jobs = get_all_jobs(status=status, search=search, growth_level=growth_level, min_score=min_score, sort_by=sort_by)
     return jsonify({"success": True, "jobs": jobs, "total": len(jobs)})
+
+@app.route('/api/jobs/deduplicate', methods=['POST'])
+def api_deduplicate_jobs():
+    result = deduplicate_all_jobs()
+    return jsonify(result)
 
 @app.route('/api/jobs', methods=['POST'])
 def api_create_job():
@@ -399,14 +408,47 @@ def api_tailor_cv():
 
 @app.route('/api/profile', methods=['GET'])
 def api_get_profile():
-    profile = get_user_profile()
-    return jsonify({"success": True, "profile": profile})
+    user_id = request.args.get('user_id', 'default')
+    profile = get_user_profile(user_id=user_id)
+    all_profiles = list_user_profiles()
+    return jsonify({"success": True, "profile": profile, "all_profiles": all_profiles})
 
 @app.route('/api/profile', methods=['POST'])
 def api_save_profile():
     data = request.json or {}
-    save_user_profile(data)
-    return jsonify({"success": True, "message": "Profile updated successfully"})
+    user_id = data.get('user_id', 'default')
+    save_user_profile(data, user_id=user_id)
+    updated = get_user_profile(user_id=user_id)
+    return jsonify({"success": True, "message": "Profile updated successfully", "profile": updated})
+
+@app.route('/api/profile/parse-resume', methods=['POST'])
+def api_parse_resume():
+    data = request.json or {}
+    text = data.get('resume_text', '')
+    if not text:
+        return jsonify({"success": False, "error": "No resume text provided"}), 400
+    parsed = parse_raw_resume(text)
+    return jsonify({"success": True, "parsed_profile": parsed})
+
+@app.route('/api/profile/login', methods=['POST'])
+def api_profile_login():
+    data = request.json or {}
+    name = data.get('name', '').strip()
+    email = data.get('email', '').strip()
+    title = data.get('title', '').strip()
+    user_id = email.lower() if email else 'default'
+    
+    existing = get_user_profile(user_id=user_id)
+    if not existing or (name and existing.get('name') != name):
+        profile = existing or get_user_profile('default') or {}
+        profile = dict(profile)
+        if name: profile['name'] = name
+        if email: profile['email'] = email
+        if title: profile['title'] = title
+        save_user_profile(profile, user_id=user_id)
+        existing = get_user_profile(user_id=user_id)
+        
+    return jsonify({"success": True, "user_id": user_id, "profile": existing})
 
 # --- LATEX APIS ---
 

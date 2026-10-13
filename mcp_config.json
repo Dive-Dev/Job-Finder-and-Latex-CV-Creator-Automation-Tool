@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "jobpulse-sqlite": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sqlite",
+        "--db-path",
+        "./jobs.db"
+      ],
+      "description": "Provides direct SQL access to the JobPulse AI database (jobs, user_profile, contacts, company_research)"
+    },
+    "jobpulse-api-bridge": {
+      "command": "python",
+      "args": ["app.py"],
+      "env": {
+        "PORT": "5000"
+      },
+      "description": "Standard REST API server exposing /api/jobs, /api/profile, /api/latex, and /api/scrape"
+    }
+  }
+}

@@ -30,9 +30,32 @@ def calculate_ats_match(profile, job_data):
         for kw in job_data.get("keywords", []):
             job_skills.add(kw.strip().lower())
 
+    # Extract role seniority from job title and profile
+    title = (job_data.get("title") or job_data.get("role") or "").lower()
+    profile_title = (profile.get("title") or "").lower()
+    
+    # Seniority scoring
+    leadership_keywords = ["staff", "principal", "lead", "director", "architect", "head", "vp"]
+    senior_keywords = ["senior", "sr", "experienced", "iii", "iv", "level 5", "level 6"]
+    entry_keywords = ["junior", "jr", "entry", "intern", "associate", "graduate", "i", "ii"]
+    
+    is_leadership_job = any(k in title for k in leadership_keywords)
+    is_senior_job = any(k in title for k in senior_keywords)
+    is_entry_job = any(k in title for k in entry_keywords)
+    
+    user_is_senior = any(k in profile_title for k in senior_keywords) or any(k in profile_title for k in leadership_keywords)
+    user_is_leadership = any(k in profile_title for k in leadership_keywords)
+    
+    # Base skills matching
     if not job_skills:
+        growth_level = "Target Fit"
+        growth_score = 88
+        growth_insights = "Solid role alignment. Matches core technical capabilities."
         return {
             "score": 85,
+            "growth_score": growth_score,
+            "growth_level": growth_level,
+            "growth_insights": growth_insights,
             "matched_skills": list(profile_skills)[:5],
             "missing_skills": [],
             "recommendations": ["Ensure key keywords from the JD are mirrored in your experience bullets."]
@@ -45,6 +68,45 @@ def calculate_ats_match(profile, job_data):
     # Baseline score between 40% and 98%
     score = int(min(98, max(35, round(ratio * 100))))
 
+    # Compute Growth Accuracy & Trajectory
+    growth_score = score
+    if is_leadership_job:
+        if user_is_leadership:
+            growth_level = "Leadership"
+            growth_score = min(96, score + 5)
+            growth_insights = "Matches your leadership and architectural track record. High-impact strategic role."
+        elif user_is_senior:
+            growth_level = "Stretch / Growth"
+            growth_score = min(95, score + 12)
+            growth_insights = "Premier promotion trajectory! Excellent step up from Senior into Staff/Lead engineering."
+        else:
+            growth_level = "Stretch / High Ambition"
+            growth_score = min(90, score)
+            growth_insights = "Ambitious leap into leadership. Highlight systems design and technical ownership."
+    elif is_senior_job:
+        if user_is_senior:
+            growth_level = "Target Fit"
+            growth_score = min(98, score + 4)
+            growth_insights = "Direct seniority match. High conversion likelihood for interview calls."
+        else:
+            growth_level = "Stretch / Growth"
+            growth_score = min(94, score + 10)
+            growth_insights = "Clear growth opportunity to advance into a formal Senior title."
+    elif is_entry_job:
+        growth_level = "Foundation"
+        growth_score = max(50, score - 10)
+        growth_insights = "Foundation role. May underutilize your full technical bandwidth."
+    else:
+        # Mid-level / General
+        if user_is_senior:
+            growth_level = "Lateral / Safe Bet"
+            growth_score = score
+            growth_insights = "Comfortable lateral technical alignment."
+        else:
+            growth_level = "Target Fit"
+            growth_score = min(95, score + 5)
+            growth_insights = "Strong core fit for current career phase."
+
     recommendations = []
     if missing:
         recommendations.append(f"Add projects or experience demonstrating: {', '.join(missing[:4]).title()}.")
@@ -53,6 +115,9 @@ def calculate_ats_match(profile, job_data):
 
     return {
         "score": score,
+        "growth_score": growth_score,
+        "growth_level": growth_level,
+        "growth_insights": growth_insights,
         "matched_skills": [m.title() for m in matched],
         "missing_skills": [m.title() for m in missing],
         "recommendations": recommendations

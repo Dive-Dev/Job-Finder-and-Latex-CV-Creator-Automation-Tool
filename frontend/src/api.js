@@ -5,7 +5,8 @@ const API_BASE = '/api'
 export const api = {
   // Stats & Pipeline
   getStats: () => axios.get(`${API_BASE}/stats`).then(res => res.data),
-  getJobs: () => axios.get(`${API_BASE}/jobs`).then(res => res.data),
+  getJobs: (params = {}) => axios.get(`${API_BASE}/jobs`, { params }).then(res => res.data),
+  deduplicateJobs: () => axios.post(`${API_BASE}/jobs/deduplicate`).then(res => res.data),
   addJob: (job) => axios.post(`${API_BASE}/jobs`, job).then(res => res.data),
   updateJobStatus: (id, status) => axios.patch(`${API_BASE}/jobs/${id}/status`, { status }).then(res => res.data),
   updateJobDetails: (id, details) => axios.patch(`${API_BASE}/jobs/${id}`, details).then(res => res.data),
@@ -25,9 +26,11 @@ export const api = {
   deleteContact: (id) => axios.delete(`${API_BASE}/contacts/${id}`).then(res => res.data),
   generateContactOutreach: (payload) => axios.post(`${API_BASE}/contacts/outreach`, payload).then(res => res.data),
 
-  // Candidate Profile
-  getProfile: () => axios.get(`${API_BASE}/profile`).then(res => res.data),
+  // Candidate Profile & Simple Login
+  getProfile: (user_id) => axios.get(`${API_BASE}/profile`, { params: { user_id } }).then(res => res.data),
   saveProfile: (profile) => axios.post(`${API_BASE}/profile`, profile).then(res => res.data),
+  parseResume: (resume_text) => axios.post(`${API_BASE}/profile/parse-resume`, { resume_text }).then(res => res.data),
+  loginUser: (credentials) => axios.post(`${API_BASE}/profile/login`, credentials).then(res => res.data),
 
   // LaTeX CV & Studio
   generateLatexCV: (payload) => axios.post(`${API_BASE}/latex/generate`, payload).then(res => res.data),
